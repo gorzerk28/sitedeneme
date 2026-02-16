@@ -13,100 +13,88 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="bg-blur bg-blur-1"></div>
-    <div class="bg-blur bg-blur-2"></div>
-
-    <header class="topbar">
-      <div class="brand">
-        <span class="brand-icon">💌</span>
+    <main class="app-shell">
+      <header class="topbar card">
         <div>
-          <p class="brand-title">Kalp Postası</p>
-          <p class="brand-subtitle">Hayalleri birlikte planlayalım</p>
+          <p class="eyebrow">💌 Kalp Postası</p>
+          <h1>Talep Merkezi</h1>
+          <p class="muted">Basit, temiz ve takip edilebilir istek akışı.</p>
         </div>
-      </div>
+        <nav class="tabs" aria-label="Sayfalar">
+          <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
+          <button class="tab-btn" data-tab="track">Takip</button>
+          <button class="tab-btn" data-tab="admin">Admin</button>
+        </nav>
+      </header>
 
-      <nav class="tabs" aria-label="Sayfalar">
-        <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
-        <button class="tab-btn" data-tab="track">Talep Takibi</button>
-        <button class="tab-btn" data-tab="admin">Admin Paneli</button>
-      </nav>
-    </header>
-
-    <main class="layout">
       <section class="panel active" id="create">
-        <div class="panel-head">
-          <h1>Yeni Bir Talep Gönder</h1>
-          <p>
-            İsteğini net yaz; ben de talebi değerlendirip sonuç kısmına dönüş bırakayım.
-          </p>
-        </div>
+        <article class="card">
+          <h2>Yeni Talep</h2>
+          <p class="muted">İsteğini yaz, ben değerlendireyim; sonucu takipten gör.</p>
 
-        <form id="requestForm" class="card form-grid">
-          <label>
-            Talep Başlığı
-            <input name="title" placeholder="Örn: Cumartesi brunch planı" required />
-          </label>
+          <form id="requestForm" class="form-grid">
+            <label>
+              Talep Başlığı
+              <input name="title" placeholder="Örn: Cumartesi kahvaltı planı" required />
+            </label>
 
-          <label>
-            Kategori
-            <select name="category" required>
-              <option value="">Seçiniz</option>
-              <option>Romantik</option>
-              <option>Gezi</option>
-              <option>Sürpriz</option>
-              <option>Destek</option>
-              <option>Diğer</option>
-            </select>
-          </label>
+            <label>
+              Kategori
+              <select name="category" required>
+                <option value="">Seçiniz</option>
+                <option>Romantik</option>
+                <option>Gezi</option>
+                <option>Sürpriz</option>
+                <option>Destek</option>
+                <option>Diğer</option>
+              </select>
+            </label>
 
-          <label>
-            Öncelik
-            <select name="priority" required>
-              <option value="">Seçiniz</option>
-              <option>Normal</option>
-              <option>Yüksek</option>
-              <option>Çok Acil</option>
-            </select>
-          </label>
+            <label>
+              Öncelik
+              <select name="priority" required>
+                <option value="">Seçiniz</option>
+                <option>Normal</option>
+                <option>Yüksek</option>
+                <option>Çok Acil</option>
+              </select>
+            </label>
 
-          <label>
-            İstenen Tarih
-            <input name="targetDate" type="date" required />
-          </label>
+            <label>
+              İstenen Tarih
+              <input name="targetDate" type="date" required />
+            </label>
 
-          <label class="full">
-            Talep Detayı
-            <textarea
-              name="detail"
-              rows="5"
-              placeholder="Neyi, ne zaman, nasıl istediğini detaylıca yaz..."
-              required
-            ></textarea>
-          </label>
+            <label class="full">
+              Talep Detayı
+              <textarea
+                name="detail"
+                rows="5"
+                placeholder="Ne istediğini kısa ve net şekilde yaz..."
+                required
+              ></textarea>
+            </label>
 
-          <button type="submit" class="btn-primary">Talebi Gönder</button>
-          <p id="formInfo" class="muted" aria-live="polite"></p>
-        </form>
+            <div class="full action-row">
+              <button type="submit" class="btn-primary">Talebi Gönder</button>
+              <p id="formInfo" class="muted" aria-live="polite"></p>
+            </div>
+          </form>
+        </article>
       </section>
 
       <section class="panel" id="track">
-        <div class="panel-head">
-          <h1>Talep Takibi</h1>
-          <p>Tüm taleplerin durumunu ve sonuç notlarını buradan görebilirsin.</p>
-        </div>
-
-        <div id="trackList" class="stack"></div>
+        <article class="card">
+          <h2>Talep Takibi</h2>
+          <p class="muted">Durum ve sonuç notlarını burada takip edebilirsin.</p>
+          <div id="trackList" class="stack"></div>
+        </article>
       </section>
 
       <section class="panel" id="admin">
-        <div class="panel-head">
-          <h1>Admin Paneli</h1>
-          <p>Bu alan sadece sana özel. Gelen talepleri yönetip sonuç gir.</p>
-        </div>
-
-        <div id="adminGate" class="card login-card">
+        <article id="adminGate" class="card login-card">
           <h2>Admin Girişi</h2>
-          <p class="muted">Panele erişmek için şifreni gir.</p>
+          <p class="muted">Sadece sana özel panel.</p>
           <form id="adminLoginForm" class="inline-form">
             <input
               type="password"
@@ -118,41 +106,45 @@
             <button class="btn-primary" type="submit">Giriş Yap</button>
           </form>
           <p id="loginInfo" class="muted" aria-live="polite"></p>
-        </div>
+        </article>
 
         <div id="adminContent" class="hidden">
-          <div class="card admin-toolbar">
-            <p><strong>Admin:</strong> Giriş başarılı ✅</p>
+          <article class="card admin-toolbar">
+            <p><strong>Admin oturumu açık</strong></p>
             <button id="logoutBtn" class="btn-ghost">Çıkış Yap</button>
-          </div>
-          <div id="adminList" class="stack"></div>
+          </article>
+
+          <article class="card">
+            <h2>Gelen Talepler</h2>
+            <div id="adminList" class="stack"></div>
+          </article>
         </div>
       </section>
     </main>
 
     <template id="trackItemTemplate">
-      <article class="card request-card">
+      <article class="request-card">
         <div class="request-head">
           <h3 data-field="title"></h3>
           <span class="badge" data-field="status"></span>
         </div>
         <p class="meta" data-field="meta"></p>
-        <p data-field="detail"></p>
+        <p class="content" data-field="detail"></p>
         <div class="result-box">
-          <h4>Sonuç Notu</h4>
+          <h4>Sonuç</h4>
           <p data-field="result"></p>
         </div>
       </article>
     </template>
 
     <template id="adminItemTemplate">
-      <article class="card request-card">
+      <article class="request-card">
         <div class="request-head">
           <h3 data-field="title"></h3>
           <span class="badge" data-field="status"></span>
         </div>
         <p class="meta" data-field="meta"></p>
-        <p data-field="detail"></p>
+        <p class="content" data-field="detail"></p>
 
         <form class="admin-form" data-role="updateForm">
           <label>
