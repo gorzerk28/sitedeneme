@@ -15,12 +15,19 @@
   <body class="is-locked">
     <section id="siteGate" class="site-gate" aria-label="Site giriş şifresi">
       <article class="gate-card">
-        <p class="eyebrow">🔒 Özel Alan</p>
+        <p class="eyebrow">🔒 Sadece İkimize Özel</p>
         <h1>Kalp Postası</h1>
         <p class="muted">
-          Bu site yalnızca size özel. Devam etmek için ortak giriş şifresini giriniz.
+          Küçük mutluluklarımızı birlikte planladığımız özel alanımıza hoş geldin.
         </p>
         <form id="siteLoginForm" class="gate-form">
+          <label>
+            Giriş Rolü
+            <select name="siteRole" required>
+              <option value="sevgilim">Sevgilim</option>
+              <option value="ben">Ben (Admin)</option>
+            </select>
+          </label>
           <label>
             Site Şifresi
             <input
@@ -31,7 +38,7 @@
               required
             />
           </label>
-          <button class="btn-primary" type="submit">Siteye Gir</button>
+          <button class="btn-primary" type="submit">Özel Alana Gir</button>
         </form>
         <p id="siteLoginInfo" class="muted" aria-live="polite"></p>
       </article>
@@ -41,25 +48,31 @@
       <header class="topbar card">
         <div>
           <p class="eyebrow">💌 Kalp Postası</p>
-          <h1>Talep Merkezi</h1>
-          <p class="muted">Basit, temiz ve takip edilebilir istek akışı.</p>
+          <h1>Birlikte Güzel Anlar Planlayalım</h1>
+          <p class="muted">Kalbinden geçen her isteği bırak, sevgiyle takip edelim.</p>
         </div>
-        <nav class="tabs" aria-label="Sayfalar">
-          <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
-          <button class="tab-btn" data-tab="track">Takip</button>
-          <button class="tab-btn" data-tab="admin">Admin</button>
-        </nav>
+        <div class="topbar-right">
+          <p class="session-pill">
+            Aktif Rol: <strong id="activeRoleLabel">Sevgilim</strong>
+          </p>
+          <nav class="tabs" aria-label="Sayfalar">
+            <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
+            <button class="tab-btn" data-tab="track">Aşk Takibi</button>
+            <button class="tab-btn" data-tab="admin" id="adminTabBtn">Admin</button>
+          </nav>
+          <button id="siteLogoutBtn" class="btn-ghost" type="button">Siteyi Kilitle</button>
+        </div>
       </header>
 
       <section class="panel active" id="create">
         <article class="card">
-          <h2>Yeni Talep</h2>
-          <p class="muted">İsteğini yaz, ben değerlendireyim; sonucu takipten gör.</p>
+          <h2>Kalbinden Geçeni Yaz</h2>
+          <p class="muted">Ne hissettiğini yaz, ben de özenle değerlendirip dönüş yapayım.</p>
 
           <form id="requestForm" class="form-grid">
             <label>
               Talep Başlığı
-              <input name="title" placeholder="Örn: Cumartesi kahvaltı planı" required />
+              <input name="title" placeholder="Örn: Gün batımında sahil yürüyüşü" required />
             </label>
 
             <label>
@@ -94,13 +107,13 @@
               <textarea
                 name="detail"
                 rows="5"
-                placeholder="Ne istediğini kısa ve net şekilde yaz..."
+                placeholder="Hayalini kısa ve net şekilde yaz..."
                 required
               ></textarea>
             </label>
 
             <div class="full action-row">
-              <button type="submit" class="btn-primary">Talebi Gönder</button>
+              <button type="submit" class="btn-primary">Talebi Sevgiyle Gönder</button>
               <p id="formInfo" class="muted" aria-live="polite"></p>
             </div>
           </form>
@@ -109,8 +122,8 @@
 
       <section class="panel" id="track">
         <article class="card">
-          <h2>Talep Takibi</h2>
-          <p class="muted">Durum ve sonuç notlarını burada takip edebilirsin.</p>
+          <h2>İstek Yolculuğu</h2>
+          <p class="muted">Durumu ve bıraktığım notları buradan kalp rahatlığıyla takip et.</p>
           <div id="trackList" class="stack"></div>
         </article>
       </section>
@@ -118,7 +131,7 @@
       <section class="panel" id="admin">
         <article id="adminGate" class="card login-card">
           <h2>Admin Girişi</h2>
-          <p class="muted">Sadece sana özel panel.</p>
+          <p class="muted">Bu alan yalnızca sana özel yönetim ekranıdır.</p>
           <form id="adminLoginForm" class="inline-form">
             <input
               type="password"
@@ -135,7 +148,7 @@
         <div id="adminContent" class="hidden">
           <article class="card admin-toolbar">
             <p><strong>Admin oturumu açık</strong></p>
-            <button id="logoutBtn" class="btn-ghost">Çıkış Yap</button>
+            <button id="logoutBtn" class="btn-ghost">Admin Çıkışı</button>
           </article>
 
           <article class="card">
@@ -185,11 +198,17 @@
             Sonuç Notu
             <textarea name="result" rows="3" required></textarea>
           </label>
-          <button class="btn-primary" type="submit">Güncelle</button>
+          <div class="admin-actions">
+            <button class="btn-primary" type="submit">Güncelle</button>
+            <button class="btn-ghost" type="button" data-role="notifyBtn">Bildirim Hazırla</button>
+            <button class="btn-danger" type="button" data-role="deleteBtn">Talebi Sil</button>
+          </div>
+          <p class="muted" data-role="notifyInfo"></p>
         </form>
       </article>
     </template>
 
+    <script src="config.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

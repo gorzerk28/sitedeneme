@@ -1,20 +1,25 @@
 const STORAGE_KEY = "kalp-postasi-requests";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
+const SITE_ROLE_KEY = "kalp-postasi-site-role";
 
-// Not: Statik sitede bu şifreler istemci tarafında görünür. Gerçek güvenlik için backend gerekir.
-const SITE_PASSWORD = "bizbize2026";
-const ADMIN_PASSWORD = "askim123";
+const config = window.APP_CONFIG || {};
+const sitePasswords = config.siteAccessPasswords || {};
+const ADMIN_PASSWORD = config.adminPassword || "";
 
 const state = {
   requests: loadRequests(),
   failedSiteAttempts: 0,
+  siteRole: sessionStorage.getItem(SITE_ROLE_KEY) || "sevgilim",
 };
 
 const body = document.body;
 const appShell = document.getElementById("appShell");
 const siteLoginForm = document.getElementById("siteLoginForm");
 const siteLoginInfo = document.getElementById("siteLoginInfo");
+const siteLogoutBtn = document.getElementById("siteLogoutBtn");
+const activeRoleLabel = document.getElementById("activeRoleLabel");
+const adminTabBtn = document.getElementById("adminTabBtn");
 
 const tabs = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".panel");
@@ -53,15 +58,48 @@ function formatDate(isoDate) {
   });
 }
 
+function roleLabel(role) {
+  return role === "ben" ? "Ben (Admin)" : "Sevgilim";
+}
+
+function lockSite() {
+  sessionStorage.setItem(SITE_SESSION_KEY, "0");
+  sessionStorage.removeItem(SITE_ROLE_KEY);
+  state.siteRole = "sevgilim";
+  setAdminSession(false);
+  setSiteSession(false);
+  siteLoginForm.reset();
+  activateTab("create");
+}
+
+function applyRoleAccess() {
+  activeRoleLabel.textContent = roleLabel(state.siteRole);
+  const isAdminRole = state.siteRole === "ben";
+
+  adminTabBtn.classList.toggle("hidden", !isAdminRole);
+  if (!isAdminRole) {
+    setAdminSession(false);
+    activateTab("create");
+  }
+}
+
 function setSiteSession(isActive) {
   sessionStorage.setItem(SITE_SESSION_KEY, isActive ? "1" : "0");
 
   body.classList.toggle("is-locked", !isActive);
   body.classList.toggle("is-unlocked", isActive);
   appShell.setAttribute("aria-hidden", String(!isActive));
+
+  if (isActive) {
+    applyRoleAccess();
+  }
 }
 
 function activateTab(tabId) {
+  if (tabId === "admin" && state.siteRole !== "ben") {
+    return;
+  }
+
   tabs.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
@@ -77,9 +115,14 @@ tabs.forEach((btn) => {
 
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const entered = siteLoginForm.elements.sitePassword.value;
 
-  if (entered === SITE_PASSWORD) {
+  const role = siteLoginForm.elements.siteRole.value;
+  const entered = siteLoginForm.elements.sitePassword.value;
+  const expected = sitePasswords[role];
+
+  if (expected && entered === expected) {
+    state.siteRole = role;
+    sessionStorage.setItem(SITE_ROLE_KEY, role);
     setSiteSession(true);
     siteLoginInfo.textContent = "";
     siteLoginForm.reset();
@@ -100,7 +143,11 @@ siteLoginForm.addEventListener("submit", (event) => {
     return;
   }
 
-  siteLoginInfo.textContent = "Şifre yanlış. Siteye yalnızca yetkili kişiler girebilir.";
+  siteLoginInfo.textContent = "Şifre yanlış. Bu alan yalnızca size özel.";
+});
+
+siteLogoutBtn.addEventListener("click", () => {
+  lockSite();
 });
 
 function createTrackCard(item) {
@@ -119,7 +166,7 @@ function createTrackCard(item) {
 
   node.querySelector('[data-field="detail"]').textContent = item.detail;
   node.querySelector('[data-field="result"]').textContent =
-    item.result || "Henüz sonuç notu eklenmedi. Talebin değerlendirilince burada gözükecek.";
+    item.result || "Henüz sonuç notu eklenmedi. Değerlendirme sonrası burada gözükecek.";
 
   return node;
 }
@@ -128,12 +175,16 @@ function renderTrackList() {
   trackList.innerHTML = "";
 
   if (!state.requests.length) {
-    trackList.innerHTML = '<p class="muted">Henüz talep yok. İlk talebi oluşturabilirsin 💖</p>';
+    trackList.innerHTML = '<p class="muted">Henüz talep yok. İlk isteğini bırakabilirsin 💖</p>';
     return;
   }
 
   const ordered = [...state.requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   ordered.forEach((item) => trackList.appendChild(createTrackCard(item)));
+}
+
+function buildNotificationText(item, status, result) {
+  return `💌 Kalp Postası Güncellemesi\nTalep: ${item.title}\nDurum: ${status}\nNot: ${result || "Not eklenmedi"}`;
 }
 
 function createAdminCard(item) {
@@ -153,6 +204,10 @@ function createAdminCard(item) {
   node.querySelector('[data-field="detail"]').textContent = item.detail;
 
   const form = node.querySelector('[data-role="updateForm"]');
+  const notifyBtn = node.querySelector('[data-role="notifyBtn"]');
+  const deleteBtn = node.querySelector('[data-role="deleteBtn"]');
+  const notifyInfo = node.querySelector('[data-role="notifyInfo"]');
+
   form.elements.status.value = item.status;
   form.elements.result.value = item.result;
 
@@ -168,6 +223,29 @@ function createAdminCard(item) {
     target.result = result;
     target.updatedAt = new Date().toISOString();
 
+    saveRequests();
+    renderTrackList();
+    renderAdminList();
+  });
+
+  notifyBtn.addEventListener("click", async () => {
+    const status = form.elements.status.value;
+    const result = form.elements.result.value.trim();
+    const text = buildNotificationText(item, status, result);
+
+    try {
+      await navigator.clipboard.writeText(text);
+      notifyInfo.textContent = "Bildirim metni panoya kopyalandı. WhatsApp/Telegram'dan paylaşabilirsin.";
+    } catch {
+      notifyInfo.textContent = "Panoya kopyalama başarısız. Elle kopyalayarak gönderebilirsin.";
+    }
+  });
+
+  deleteBtn.addEventListener("click", () => {
+    const confirmed = confirm(`"${item.title}" talebini kalıcı olarak silmek istiyor musun?`);
+    if (!confirmed) return;
+
+    state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
     renderTrackList();
     renderAdminList();
@@ -200,7 +278,7 @@ requestForm.addEventListener("submit", (event) => {
     detail: formData.get("detail").toString().trim(),
     targetDate: formData.get("targetDate").toString(),
     status: "Beklemede",
-    result: "Talep alındı. En kısa sürede değerlendirilecek 💞",
+    result: "Talebin sevgiyle alındı. En kısa sürede değerlendirilecek 💞",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -209,7 +287,7 @@ requestForm.addEventListener("submit", (event) => {
   saveRequests();
 
   requestForm.reset();
-  formInfo.textContent = "Talebin başarıyla gönderildi! Takip sekmesinden durumu izleyebilirsin.";
+  formInfo.textContent = "Talebin başarıyla gönderildi! Aşk Takibi sekmesinden durumu izleyebilirsin.";
 
   renderTrackList();
   renderAdminList();
@@ -237,7 +315,7 @@ adminLoginForm.addEventListener("submit", (event) => {
     return;
   }
 
-  loginInfo.textContent = "Şifre yanlış. Sadece admin giriş yapabilir.";
+  loginInfo.textContent = "Şifre yanlış. Bu alan sadece admin kullanımına açık.";
 });
 
 logoutBtn.addEventListener("click", () => {
@@ -245,6 +323,11 @@ logoutBtn.addEventListener("click", () => {
   loginInfo.textContent = "Admin oturumu kapatıldı.";
 });
 
+if (!sitePasswords.sevgilim || !sitePasswords.ben || !ADMIN_PASSWORD) {
+  siteLoginInfo.textContent = "Yapılandırma eksik: config.js dosyasındaki şifreleri kontrol edin.";
+}
+
 renderTrackList();
-setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
+setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1" && state.siteRole === "ben");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
+applyRoleAccess();
