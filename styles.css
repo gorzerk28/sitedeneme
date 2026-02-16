@@ -131,13 +131,6 @@ h2 {
   justify-items: end;
 }
 
-.session-pill {
-  font-size: 0.85rem;
-  background: #fff0f7;
-  border: 1px solid #f5cfe2;
-  border-radius: 999px;
-  padding: 6px 10px;
-}
 
 .tabs {
   display: flex;
@@ -258,6 +251,23 @@ textarea {
   display: grid;
   gap: 12px;
 }
+
+.notify-card {
+  border: 1px solid #f3cade;
+  border-radius: 12px;
+  background: #fff3f8;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notify-card p {
+  color: #7b2d57;
+  font-weight: 600;
+}
+
 
 .request-card {
   border: 1px solid var(--line);

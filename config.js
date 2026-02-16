@@ -1,7 +1,6 @@
 window.APP_CONFIG = {
-  siteAccessPasswords: {
-    sevgilim: "kalbim2026",
-    ben: "ruhum2026",
-  },
+  // Sevgilin için site giriş şifresi
+  sitePassword: "kalbim2026",
+  // Sadece sana özel admin panel şifresi
   adminPassword: "askim123",
 };

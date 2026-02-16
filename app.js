@@ -1,16 +1,14 @@
 const STORAGE_KEY = "kalp-postasi-requests";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
-const SITE_ROLE_KEY = "kalp-postasi-site-role";
 
 const config = window.APP_CONFIG || {};
-const sitePasswords = config.siteAccessPasswords || {};
+const SITE_PASSWORD = config.sitePassword || "";
 const ADMIN_PASSWORD = config.adminPassword || "";
 
 const state = {
   requests: loadRequests(),
   failedSiteAttempts: 0,
-  siteRole: sessionStorage.getItem(SITE_ROLE_KEY) || "sevgilim",
 };
 
 const body = document.body;
@@ -18,14 +16,13 @@ const appShell = document.getElementById("appShell");
 const siteLoginForm = document.getElementById("siteLoginForm");
 const siteLoginInfo = document.getElementById("siteLoginInfo");
 const siteLogoutBtn = document.getElementById("siteLogoutBtn");
-const activeRoleLabel = document.getElementById("activeRoleLabel");
-const adminTabBtn = document.getElementById("adminTabBtn");
 
 const tabs = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".panel");
 const requestForm = document.getElementById("requestForm");
 const formInfo = document.getElementById("formInfo");
 const trackList = document.getElementById("trackList");
+const trackNotifications = document.getElementById("trackNotifications");
 const adminList = document.getElementById("adminList");
 const adminLoginForm = document.getElementById("adminLoginForm");
 const loginInfo = document.getElementById("loginInfo");
@@ -39,7 +36,12 @@ function loadRequests() {
 
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((item) => ({
+      ...item,
+      partnerNotified: item.partnerNotified ?? true,
+    }));
   } catch {
     return [];
   }
@@ -58,48 +60,15 @@ function formatDate(isoDate) {
   });
 }
 
-function roleLabel(role) {
-  return role === "ben" ? "Ben (Admin)" : "Sevgilim";
-}
-
-function lockSite() {
-  sessionStorage.setItem(SITE_SESSION_KEY, "0");
-  sessionStorage.removeItem(SITE_ROLE_KEY);
-  state.siteRole = "sevgilim";
-  setAdminSession(false);
-  setSiteSession(false);
-  siteLoginForm.reset();
-  activateTab("create");
-}
-
-function applyRoleAccess() {
-  activeRoleLabel.textContent = roleLabel(state.siteRole);
-  const isAdminRole = state.siteRole === "ben";
-
-  adminTabBtn.classList.toggle("hidden", !isAdminRole);
-  if (!isAdminRole) {
-    setAdminSession(false);
-    activateTab("create");
-  }
-}
-
 function setSiteSession(isActive) {
   sessionStorage.setItem(SITE_SESSION_KEY, isActive ? "1" : "0");
 
   body.classList.toggle("is-locked", !isActive);
   body.classList.toggle("is-unlocked", isActive);
   appShell.setAttribute("aria-hidden", String(!isActive));
-
-  if (isActive) {
-    applyRoleAccess();
-  }
 }
 
 function activateTab(tabId) {
-  if (tabId === "admin" && state.siteRole !== "ben") {
-    return;
-  }
-
   tabs.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
   });
@@ -116,13 +85,9 @@ tabs.forEach((btn) => {
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const role = siteLoginForm.elements.siteRole.value;
   const entered = siteLoginForm.elements.sitePassword.value;
-  const expected = sitePasswords[role];
 
-  if (expected && entered === expected) {
-    state.siteRole = role;
-    sessionStorage.setItem(SITE_ROLE_KEY, role);
+  if (SITE_PASSWORD && entered === SITE_PASSWORD) {
     setSiteSession(true);
     siteLoginInfo.textContent = "";
     siteLoginForm.reset();
@@ -147,8 +112,44 @@ siteLoginForm.addEventListener("submit", (event) => {
 });
 
 siteLogoutBtn.addEventListener("click", () => {
-  lockSite();
+  setAdminSession(false);
+  setSiteSession(false);
+  siteLoginForm.reset();
+  activateTab("create");
 });
+
+function createTrackNotification(item) {
+  const template = document.getElementById("trackNotificationTemplate");
+  const node = template.content.firstElementChild.cloneNode(true);
+
+  node.querySelector('[data-field="notifyText"]').textContent =
+    `💖 Bir tanem, "${item.title}" talebin cevaplandı. Talep Takip kısmından detayını görebilirsin.`;
+
+  node.querySelector('[data-role="seenBtn"]').addEventListener("click", () => {
+    const target = state.requests.find((req) => req.id === item.id);
+    if (!target) return;
+
+    target.partnerNotified = true;
+    saveRequests();
+    renderTrackNotifications();
+  });
+
+  return node;
+}
+
+function renderTrackNotifications() {
+  trackNotifications.innerHTML = "";
+
+  const notifications = state.requests
+    .filter((item) => !item.partnerNotified && item.updatedAt !== item.createdAt)
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  if (!notifications.length) {
+    return;
+  }
+
+  notifications.forEach((item) => trackNotifications.appendChild(createTrackNotification(item)));
+}
 
 function createTrackCard(item) {
   const template = document.getElementById("trackItemTemplate");
@@ -222,8 +223,10 @@ function createAdminCard(item) {
     target.status = status;
     target.result = result;
     target.updatedAt = new Date().toISOString();
+    target.partnerNotified = false;
 
     saveRequests();
+    renderTrackNotifications();
     renderTrackList();
     renderAdminList();
   });
@@ -247,6 +250,7 @@ function createAdminCard(item) {
 
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
+    renderTrackNotifications();
     renderTrackList();
     renderAdminList();
   });
@@ -279,6 +283,7 @@ requestForm.addEventListener("submit", (event) => {
     targetDate: formData.get("targetDate").toString(),
     status: "Beklemede",
     result: "Talebin sevgiyle alındı. En kısa sürede değerlendirilecek 💞",
+    partnerNotified: true,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -287,8 +292,9 @@ requestForm.addEventListener("submit", (event) => {
   saveRequests();
 
   requestForm.reset();
-  formInfo.textContent = "Talebin başarıyla gönderildi! Aşk Takibi sekmesinden durumu izleyebilirsin.";
+  formInfo.textContent = "Talebin başarıyla gönderildi! Talep Takip sekmesinden durumu izleyebilirsin.";
 
+  renderTrackNotifications();
   renderTrackList();
   renderAdminList();
   activateTab("track");
@@ -323,11 +329,11 @@ logoutBtn.addEventListener("click", () => {
   loginInfo.textContent = "Admin oturumu kapatıldı.";
 });
 
-if (!sitePasswords.sevgilim || !sitePasswords.ben || !ADMIN_PASSWORD) {
+if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
   siteLoginInfo.textContent = "Yapılandırma eksik: config.js dosyasındaki şifreleri kontrol edin.";
 }
 
+renderTrackNotifications();
 renderTrackList();
-setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1" && state.siteRole === "ben");
+setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
-applyRoleAccess();

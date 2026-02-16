@@ -22,13 +22,6 @@
         </p>
         <form id="siteLoginForm" class="gate-form">
           <label>
-            Giriş Rolü
-            <select name="siteRole" required>
-              <option value="sevgilim">Sevgilim</option>
-              <option value="ben">Ben (Admin)</option>
-            </select>
-          </label>
-          <label>
             Site Şifresi
             <input
               type="password"
@@ -52,12 +45,9 @@
           <p class="muted">Kalbinden geçen her isteği bırak, sevgiyle takip edelim.</p>
         </div>
         <div class="topbar-right">
-          <p class="session-pill">
-            Aktif Rol: <strong id="activeRoleLabel">Sevgilim</strong>
-          </p>
           <nav class="tabs" aria-label="Sayfalar">
             <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
-            <button class="tab-btn" data-tab="track">Aşk Takibi</button>
+            <button class="tab-btn" data-tab="track">Talep Takip</button>
             <button class="tab-btn" data-tab="admin" id="adminTabBtn">Admin</button>
           </nav>
           <button id="siteLogoutBtn" class="btn-ghost" type="button">Siteyi Kilitle</button>
@@ -122,8 +112,9 @@
 
       <section class="panel" id="track">
         <article class="card">
-          <h2>İstek Yolculuğu</h2>
+          <h2>Talep Takip</h2>
           <p class="muted">Durumu ve bıraktığım notları buradan kalp rahatlığıyla takip et.</p>
+          <div id="trackNotifications" class="stack"></div>
           <div id="trackList" class="stack"></div>
         </article>
       </section>
@@ -158,6 +149,13 @@
         </div>
       </section>
     </main>
+
+    <template id="trackNotificationTemplate">
+      <article class="notify-card">
+        <p data-field="notifyText"></p>
+        <button class="btn-ghost" data-role="seenBtn" type="button">Gördüm 💗</button>
+      </article>
+    </template>
 
     <template id="trackItemTemplate">
       <article class="request-card">
