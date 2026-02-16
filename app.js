@@ -1,10 +1,20 @@
 const STORAGE_KEY = "kalp-postasi-requests";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
+const SITE_SESSION_KEY = "kalp-postasi-site-session";
+
+// Not: Statik sitede bu şifreler istemci tarafında görünür. Gerçek güvenlik için backend gerekir.
+const SITE_PASSWORD = "bizbize2026";
 const ADMIN_PASSWORD = "askim123";
 
 const state = {
   requests: loadRequests(),
+  failedSiteAttempts: 0,
 };
+
+const body = document.body;
+const appShell = document.getElementById("appShell");
+const siteLoginForm = document.getElementById("siteLoginForm");
+const siteLoginInfo = document.getElementById("siteLoginInfo");
 
 const tabs = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".panel");
@@ -43,6 +53,14 @@ function formatDate(isoDate) {
   });
 }
 
+function setSiteSession(isActive) {
+  sessionStorage.setItem(SITE_SESSION_KEY, isActive ? "1" : "0");
+
+  body.classList.toggle("is-locked", !isActive);
+  body.classList.toggle("is-unlocked", isActive);
+  appShell.setAttribute("aria-hidden", String(!isActive));
+}
+
 function activateTab(tabId) {
   tabs.forEach((btn) => {
     btn.classList.toggle("active", btn.dataset.tab === tabId);
@@ -55,6 +73,34 @@ function activateTab(tabId) {
 
 tabs.forEach((btn) => {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
+});
+
+siteLoginForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const entered = siteLoginForm.elements.sitePassword.value;
+
+  if (entered === SITE_PASSWORD) {
+    setSiteSession(true);
+    siteLoginInfo.textContent = "";
+    siteLoginForm.reset();
+    return;
+  }
+
+  state.failedSiteAttempts += 1;
+
+  if (state.failedSiteAttempts >= 5) {
+    siteLoginInfo.textContent =
+      "Çok fazla hatalı deneme yapıldı. Lütfen 30 saniye sonra tekrar deneyin.";
+    siteLoginForm.querySelector("button").disabled = true;
+    setTimeout(() => {
+      state.failedSiteAttempts = 0;
+      siteLoginForm.querySelector("button").disabled = false;
+      siteLoginInfo.textContent = "";
+    }, 30000);
+    return;
+  }
+
+  siteLoginInfo.textContent = "Şifre yanlış. Siteye yalnızca yetkili kişiler girebilir.";
 });
 
 function createTrackCard(item) {
@@ -201,3 +247,4 @@ logoutBtn.addEventListener("click", () => {
 
 renderTrackList();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
+setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");

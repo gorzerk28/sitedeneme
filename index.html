@@ -12,8 +12,32 @@
     />
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <main class="app-shell">
+  <body class="is-locked">
+    <section id="siteGate" class="site-gate" aria-label="Site giriş şifresi">
+      <article class="gate-card">
+        <p class="eyebrow">🔒 Özel Alan</p>
+        <h1>Kalp Postası</h1>
+        <p class="muted">
+          Bu site yalnızca size özel. Devam etmek için ortak giriş şifresini giriniz.
+        </p>
+        <form id="siteLoginForm" class="gate-form">
+          <label>
+            Site Şifresi
+            <input
+              type="password"
+              name="sitePassword"
+              placeholder="Giriş şifresi"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <button class="btn-primary" type="submit">Siteye Gir</button>
+        </form>
+        <p id="siteLoginInfo" class="muted" aria-live="polite"></p>
+      </article>
+    </section>
+
+    <main id="appShell" class="app-shell" aria-hidden="true">
       <header class="topbar card">
         <div>
           <p class="eyebrow">💌 Kalp Postası</p>
