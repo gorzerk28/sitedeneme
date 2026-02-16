@@ -166,6 +166,11 @@ h2 {
   padding: 0 4px;
 }
 
+.bell-info {
+  min-height: 18px;
+  font-size: 0.78rem;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
@@ -372,6 +377,10 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 12px;
+}
+
+.notify-send-card {
   margin-bottom: 12px;
 }
 

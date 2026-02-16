@@ -1,4 +1,5 @@
 const STORAGE_KEY = "kalp-postasi-requests";
+const CUSTOM_NOTIFICATIONS_KEY = "kalp-postasi-custom-notifications";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
 
@@ -8,6 +9,7 @@ const ADMIN_PASSWORD = config.adminPassword || "";
 
 const state = {
   requests: loadRequests(),
+  customNotifications: loadCustomNotifications(),
   failedSiteAttempts: 0,
 };
 
@@ -18,6 +20,7 @@ const siteLoginInfo = document.getElementById("siteLoginInfo");
 const siteLogoutBtn = document.getElementById("siteLogoutBtn");
 const notificationBell = document.getElementById("notificationBell");
 const notificationCount = document.getElementById("notificationCount");
+const bellInfo = document.getElementById("bellInfo");
 
 const tabs = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".panel");
@@ -31,6 +34,8 @@ const loginInfo = document.getElementById("loginInfo");
 const adminGate = document.getElementById("adminGate");
 const adminContent = document.getElementById("adminContent");
 const logoutBtn = document.getElementById("logoutBtn");
+const sendNotificationForm = document.getElementById("sendNotificationForm");
+const sendNotificationInfo = document.getElementById("sendNotificationInfo");
 
 function loadRequests() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -49,8 +54,29 @@ function loadRequests() {
   }
 }
 
+function loadCustomNotifications() {
+  const raw = localStorage.getItem(CUSTOM_NOTIFICATIONS_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed.map((item) => ({
+      ...item,
+      read: item.read ?? false,
+    }));
+  } catch {
+    return [];
+  }
+}
+
 function saveRequests() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.requests));
+}
+
+function saveCustomNotifications() {
+  localStorage.setItem(CUSTOM_NOTIFICATIONS_KEY, JSON.stringify(state.customNotifications));
 }
 
 function formatDate(isoDate) {
@@ -120,13 +146,30 @@ siteLogoutBtn.addEventListener("click", () => {
   activateTab("create");
 });
 
-notificationBell.addEventListener("click", () => {
-  activateTab("track");
-  trackNotifications.scrollIntoView({ behavior: "smooth", block: "start" });
-});
+function getUnreadRequestNotifications() {
+  return state.requests
+    .filter((item) => !item.partnerNotified && item.updatedAt !== item.createdAt)
+    .map((item) => ({
+      type: "request",
+      id: item.id,
+      updatedAt: item.updatedAt,
+      text: `💖 Bir tanem, "${item.title}" talebin cevaplandı. Talep Takip kısmından detayını görebilirsin.`,
+    }));
+}
+
+function getUnreadCustomNotifications() {
+  return state.customNotifications
+    .filter((item) => !item.read)
+    .map((item) => ({
+      type: "custom",
+      id: item.id,
+      updatedAt: item.createdAt,
+      text: `💘 ${item.title}: ${item.message}`,
+    }));
+}
 
 function getUnreadNotifications() {
-  return state.requests.filter((item) => !item.partnerNotified && item.updatedAt !== item.createdAt);
+  return [...getUnreadRequestNotifications(), ...getUnreadCustomNotifications()];
 }
 
 function updateNotificationBell() {
@@ -135,19 +178,41 @@ function updateNotificationBell() {
   notificationCount.classList.toggle("hidden", unreadCount === 0);
 }
 
+notificationBell.addEventListener("click", () => {
+  const unreadCount = getUnreadNotifications().length;
+
+  if (unreadCount === 0) {
+    bellInfo.textContent = "Şu an yeni bildirim yok 💗";
+    return;
+  }
+
+  bellInfo.textContent = `${unreadCount} yeni bildirim var 💖`;
+  activateTab("track");
+  trackNotifications.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 function createTrackNotification(item) {
   const template = document.getElementById("trackNotificationTemplate");
   const node = template.content.firstElementChild.cloneNode(true);
 
-  node.querySelector('[data-field="notifyText"]').textContent =
-    `💖 Bir tanem, "${item.title}" talebin cevaplandı. Talep Takip kısmından detayını görebilirsin.`;
+  node.querySelector('[data-field="notifyText"]').textContent = item.text;
 
   node.querySelector('[data-role="seenBtn"]').addEventListener("click", () => {
-    const target = state.requests.find((req) => req.id === item.id);
-    if (!target) return;
+    if (item.type === "request") {
+      const target = state.requests.find((req) => req.id === item.id);
+      if (!target) return;
 
-    target.partnerNotified = true;
-    saveRequests();
+      target.partnerNotified = true;
+      saveRequests();
+    } else {
+      const target = state.customNotifications.find((notif) => notif.id === item.id);
+      if (!target) return;
+
+      target.read = true;
+      saveCustomNotifications();
+    }
+
+    bellInfo.textContent = "Bildirim okundu 💞";
     renderTrackNotifications();
   });
 
@@ -286,6 +351,30 @@ function renderAdminList() {
   const ordered = [...state.requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   ordered.forEach((item) => adminList.appendChild(createAdminCard(item)));
 }
+
+sendNotificationForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(sendNotificationForm);
+  const title = formData.get("notifyTitle").toString().trim();
+  const message = formData.get("notifyMessage").toString().trim();
+
+  const customNotification = {
+    id: `n-${Date.now().toString(36)}`,
+    title,
+    message,
+    read: false,
+    createdAt: new Date().toISOString(),
+  };
+
+  state.customNotifications.push(customNotification);
+  saveCustomNotifications();
+  renderTrackNotifications();
+
+  sendNotificationForm.reset();
+  sendNotificationInfo.textContent = "Bildirim gönderildi. Kalp simgesine düştü 💖";
+  bellInfo.textContent = "Yeni bir bildirim geldi 💘";
+});
 
 requestForm.addEventListener("submit", (event) => {
   event.preventDefault();
