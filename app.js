@@ -16,6 +16,8 @@ const appShell = document.getElementById("appShell");
 const siteLoginForm = document.getElementById("siteLoginForm");
 const siteLoginInfo = document.getElementById("siteLoginInfo");
 const siteLogoutBtn = document.getElementById("siteLogoutBtn");
+const notificationBell = document.getElementById("notificationBell");
+const notificationCount = document.getElementById("notificationCount");
 
 const tabs = document.querySelectorAll(".tab-btn");
 const panels = document.querySelectorAll(".panel");
@@ -118,6 +120,21 @@ siteLogoutBtn.addEventListener("click", () => {
   activateTab("create");
 });
 
+notificationBell.addEventListener("click", () => {
+  activateTab("track");
+  trackNotifications.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+function getUnreadNotifications() {
+  return state.requests.filter((item) => !item.partnerNotified && item.updatedAt !== item.createdAt);
+}
+
+function updateNotificationBell() {
+  const unreadCount = getUnreadNotifications().length;
+  notificationCount.textContent = String(unreadCount);
+  notificationCount.classList.toggle("hidden", unreadCount === 0);
+}
+
 function createTrackNotification(item) {
   const template = document.getElementById("trackNotificationTemplate");
   const node = template.content.firstElementChild.cloneNode(true);
@@ -140,9 +157,9 @@ function createTrackNotification(item) {
 function renderTrackNotifications() {
   trackNotifications.innerHTML = "";
 
-  const notifications = state.requests
-    .filter((item) => !item.partnerNotified && item.updatedAt !== item.createdAt)
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  const notifications = getUnreadNotifications().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+
+  updateNotificationBell();
 
   if (!notifications.length) {
     return;
