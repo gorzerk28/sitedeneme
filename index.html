@@ -59,7 +59,7 @@
           <nav class="tabs" aria-label="Sayfalar">
             <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
             <button class="tab-btn" data-tab="track">Talep Takip</button>
-            <button class="tab-btn" data-tab="admin" id="adminTabBtn">Admin</button>
+            <button class="tab-btn hidden" data-tab="admin" id="adminTabBtn">Yönetim 🔐</button>
           </nav>
           <button id="siteLogoutBtn" class="btn-ghost" type="button">Siteyi Kilitle</button>
         </div>
@@ -149,7 +149,7 @@
 
         <div id="adminContent" class="hidden">
           <article class="card admin-toolbar">
-            <p><strong>Admin oturumu açık</strong></p>
+            <p><strong>Admin oturumu açık</strong> <span id="partnerPresence" class="presence-badge offline">Sevgilin çevrimdışı</span></p>
             <button id="logoutBtn" class="btn-ghost">Admin Çıkışı</button>
           </article>
 
@@ -233,6 +233,8 @@
         </form>
       </article>
     </template>
+
+    <div id="loveBurstLayer" class="love-burst-layer" aria-hidden="true"></div>
 
     <script src="config.js"></script>
     <script src="app.js"></script>
