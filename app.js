@@ -36,6 +36,45 @@ const adminContent = document.getElementById("adminContent");
 const logoutBtn = document.getElementById("logoutBtn");
 const sendNotificationForm = document.getElementById("sendNotificationForm");
 const sendNotificationInfo = document.getElementById("sendNotificationInfo");
+const brandLogoImage = document.getElementById("brandLogoImage");
+const gateHeroImage = document.getElementById("gateHeroImage");
+
+function setFirstAvailableImage(imgEl, candidates) {
+  if (!imgEl) return;
+
+  const tryAt = (index) => {
+    if (index >= candidates.length) {
+      imgEl.style.display = "none";
+      return;
+    }
+
+    const test = new Image();
+    test.onload = () => {
+      imgEl.src = candidates[index];
+      imgEl.style.display = "";
+    };
+    test.onerror = () => tryAt(index + 1);
+    test.src = candidates[index];
+  };
+
+  tryAt(0);
+}
+
+setFirstAvailableImage(brandLogoImage, [
+  "assets/logo-kalp-isleri.png",
+  "assets/logo.png",
+  "assets/logo-2.png",
+  "logo-kalp-isleri.png",
+  "logo.png",
+]);
+
+setFirstAvailableImage(gateHeroImage, [
+  "assets/hero-envelope.png",
+  "assets/hero.png",
+  "assets/envelope.png",
+  "hero-envelope.png",
+  "hero.png",
+]);
 
 function loadRequests() {
   const raw = localStorage.getItem(STORAGE_KEY);
