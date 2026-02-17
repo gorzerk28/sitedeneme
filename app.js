@@ -3,6 +3,7 @@ const CUSTOM_NOTIFICATIONS_KEY = "kalp-postasi-custom-notifications";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
 const PRESENCE_KEY = "kalp-postasi-presence";
+const ACTIVITY_TIMELINE_KEY = "kalp-postasi-activity-timeline";
 
 const config = window.APP_CONFIG || {};
 const SITE_PASSWORD = config.sitePassword || "";
@@ -11,6 +12,7 @@ const ADMIN_PASSWORD = config.adminPassword || "";
 const state = {
   requests: loadRequests(),
   customNotifications: loadCustomNotifications(),
+  activityTimeline: loadActivityTimeline(),
   failedSiteAttempts: 0,
 };
 
@@ -41,6 +43,9 @@ const partnerPresence = document.getElementById("partnerPresence");
 const loveBurstLayer = document.getElementById("loveBurstLayer");
 const brandLogoImage = document.getElementById("brandLogoImage");
 const gateHeroImage = document.getElementById("gateHeroImage");
+const dailyLoveMessage = document.getElementById("dailyLoveMessage");
+const loveCalendar = document.getElementById("loveCalendar");
+const activityTimeline = document.getElementById("activityTimeline");
 
 function setFirstAvailableImage(imgEl, candidates) {
   if (!imgEl) return;
@@ -78,6 +83,135 @@ setFirstAvailableImage(gateHeroImage, [
   "hero-envelope.png",
   "hero.png",
 ]);
+
+const DAILY_LOVE_MESSAGES = [
+  "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
+  "Birlikte olduğumuz her gün, en sevdiğim gün oluyor. 🌸",
+  "Küçük bir gülüşün bile bütün günümü aydınlatıyor. ☀️",
+  "Sana yazılan her talep aslında sana duyduğum sevginin başka hali. 💌",
+  "İyi ki varsın, iyi ki bizim küçük dünyamız var. 🌷",
+  "Bugün ne olursa olsun, yanında olmayı seçiyorum. 🤍",
+  "Seninle sıradan günler bile kutlama gibi geliyor. ✨",
+];
+
+function getDayOfYear(date = new Date()) {
+  const start = new Date(date.getFullYear(), 0, 0);
+  const diff = date - start;
+  const oneDay = 1000 * 60 * 60 * 24;
+  return Math.floor(diff / oneDay);
+}
+
+function renderDailyLoveMessage() {
+  if (!dailyLoveMessage) return;
+
+  const index = getDayOfYear() % DAILY_LOVE_MESSAGES.length;
+  dailyLoveMessage.textContent = DAILY_LOVE_MESSAGES[index];
+}
+
+function loadActivityTimeline() {
+  const raw = localStorage.getItem(ACTIVITY_TIMELINE_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function saveActivityTimeline() {
+  localStorage.setItem(ACTIVITY_TIMELINE_KEY, JSON.stringify(state.activityTimeline));
+}
+
+function addActivity(type, text) {
+  const item = {
+    id: `a-${Date.now().toString(36)}`,
+    type,
+    text,
+    createdAt: new Date().toISOString(),
+  };
+
+  state.activityTimeline.unshift(item);
+  state.activityTimeline = state.activityTimeline.slice(0, 30);
+  saveActivityTimeline();
+  renderActivityTimeline();
+}
+
+function renderActivityTimeline() {
+  if (!activityTimeline) return;
+
+  activityTimeline.innerHTML = "";
+
+  if (!state.activityTimeline.length) {
+    activityTimeline.innerHTML = '<p class="muted">Henüz aktivite yok. İlk hareket burada görünecek 💫</p>';
+    return;
+  }
+
+  const list = document.createElement("ul");
+  list.className = "activity-list";
+
+  state.activityTimeline.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "activity-item";
+    const dateText = new Date(item.createdAt).toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    li.innerHTML = `<span class="activity-dot"></span><div><p>${item.text}</p><small>${dateText}</small></div>`;
+    list.appendChild(li);
+  });
+
+  activityTimeline.appendChild(list);
+}
+
+function renderLoveCalendar() {
+  if (!loveCalendar) return;
+
+  loveCalendar.innerHTML = "";
+
+  if (!state.requests.length) {
+    loveCalendar.innerHTML = '<p class="muted">Takvim henüz boş. İlk planı ekleyince burada gözükecek 💞</p>';
+    return;
+  }
+
+  const ordered = [...state.requests]
+    .filter((item) => item.targetDate)
+    .sort((a, b) => a.targetDate.localeCompare(b.targetDate))
+    .slice(0, 6);
+
+  ordered.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "calendar-item";
+    card.innerHTML = `
+      <p class="calendar-date">${formatDate(item.targetDate)}</p>
+      <h4>${item.title}</h4>
+      <p class="muted">${item.category} • ${item.status}</p>
+    `;
+    loveCalendar.appendChild(card);
+  });
+}
+
+function playCelebrationBurst(mode = "soft") {
+  if (!loveBurstLayer) return;
+
+  const count = mode === "big" ? 26 : 14;
+  const emojis = mode === "big" ? ["💖", "✨", "🎉", "💘"] : ["💗", "💞", "✨"];
+
+  for (let i = 0; i < count; i += 1) {
+    const confetti = document.createElement("span");
+    confetti.className = "celebration-heart";
+    confetti.textContent = emojis[i % emojis.length];
+    confetti.style.left = `${15 + Math.random() * 70}%`;
+    confetti.style.top = `${60 + Math.random() * 20}%`;
+    confetti.style.animationDelay = `${Math.random() * 180}ms`;
+    loveBurstLayer.appendChild(confetti);
+    setTimeout(() => confetti.remove(), 1700);
+  }
+}
 
 function updatePresenceHeartbeat() {
   const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
@@ -210,7 +344,11 @@ tabs.forEach((btn) => {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 });
 
-window.addEventListener("storage", renderPresenceBadge);
+window.addEventListener("storage", () => {
+  renderPresenceBadge();
+  state.activityTimeline = loadActivityTimeline();
+  renderActivityTimeline();
+});
 
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -219,6 +357,7 @@ siteLoginForm.addEventListener("submit", (event) => {
 
   if (SITE_PASSWORD && entered === SITE_PASSWORD) {
     setSiteSession(true);
+    addActivity("partner", "Sevgilin siteye giriş yaptı.");
     siteLoginInfo.textContent = "";
     siteLoginForm.reset();
     return;
@@ -244,6 +383,7 @@ siteLoginForm.addEventListener("submit", (event) => {
 siteLogoutBtn.addEventListener("click", () => {
   setAdminSession(false);
   setSiteSession(false);
+  addActivity("partner", "Site kilitlendi / kullanıcı çıkış yaptı.");
   siteLoginForm.reset();
   activateTab("create");
 });
@@ -315,6 +455,7 @@ function createTrackNotification(item) {
     }
 
     bellInfo.textContent = "Bildirim okundu 💞";
+    addActivity("partner", "Sevgilin bir bildirimi okudu.");
     renderTrackNotifications();
   });
 
@@ -361,11 +502,13 @@ function renderTrackList() {
 
   if (!state.requests.length) {
     trackList.innerHTML = '<p class="muted">Henüz talep yok. İlk isteğini bırakabilirsin 💖</p>';
+    renderLoveCalendar();
     return;
   }
 
   const ordered = [...state.requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   ordered.forEach((item) => trackList.appendChild(createTrackCard(item)));
+  renderLoveCalendar();
 }
 
 function buildNotificationText(item, status, result) {
@@ -410,6 +553,12 @@ function createAdminCard(item) {
     target.partnerNotified = false;
 
     saveRequests();
+    addActivity("admin", `Talep güncellendi: ${item.title} → ${status}`);
+
+    if (status === "Kabul Edildi" || status === "Tamamlandı") {
+      playCelebrationBurst("big");
+    }
+
     renderTrackNotifications();
     renderTrackList();
     renderAdminList();
@@ -434,6 +583,8 @@ function createAdminCard(item) {
 
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
+    addActivity("admin", `Talep silindi: ${item.title}`);
+
     renderTrackNotifications();
     renderTrackList();
     renderAdminList();
@@ -476,6 +627,8 @@ sendNotificationForm.addEventListener("submit", (event) => {
   sendNotificationForm.reset();
   sendNotificationInfo.textContent = "Bildirim gönderildi. Kalp simgesine düştü 💖";
   bellInfo.textContent = "Yeni bir bildirim geldi 💘";
+  addActivity("admin", `Özel bildirim gönderildi: ${title}`);
+  playCelebrationBurst("soft");
 });
 
 requestForm.addEventListener("submit", (event) => {
@@ -502,10 +655,13 @@ requestForm.addEventListener("submit", (event) => {
   requestForm.reset();
   formInfo.textContent = "Talebin başarıyla gönderildi! Talep Takip sekmesinden durumu izleyebilirsin.";
 
+  addActivity("partner", `Yeni talep oluşturuldu: ${request.title}`);
+
   renderTrackNotifications();
   renderTrackList();
   renderAdminList();
   playLoveBurst();
+  playCelebrationBurst("soft");
   activateTab("track");
 });
 
@@ -518,6 +674,7 @@ function setAdminSession(isActive) {
   if (isActive) {
     renderAdminList();
     renderPresenceBadge();
+    renderActivityTimeline();
   }
 }
 
@@ -527,6 +684,7 @@ adminLoginForm.addEventListener("submit", (event) => {
 
   if (entered === ADMIN_PASSWORD) {
     setAdminSession(true);
+    addActivity("admin", "Kalp Sorumlusu panele giriş yaptı.");
     loginInfo.textContent = "";
     adminLoginForm.reset();
     return;
@@ -537,6 +695,7 @@ adminLoginForm.addEventListener("submit", (event) => {
 
 logoutBtn.addEventListener("click", () => {
   setAdminSession(false);
+  addActivity("admin", "Kalp Sorumlusu panelden çıkış yaptı.");
   loginInfo.textContent = "Kalp Sorumlusu oturumu kapatıldı.";
 });
 
@@ -544,8 +703,10 @@ if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
   siteLoginInfo.textContent = "Yapılandırma eksik: config.js dosyasındaki şifreleri kontrol edin.";
 }
 
+renderDailyLoveMessage();
 renderTrackNotifications();
 renderTrackList();
+renderActivityTimeline();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
 renderPresenceBadge();
