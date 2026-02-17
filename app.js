@@ -81,11 +81,12 @@ setFirstAvailableImage(gateHeroImage, [
 
 function updatePresenceHeartbeat() {
   const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
+  const isKalpSorumlusuSession = localStorage.getItem(ADMIN_SESSION_KEY) === "1";
 
   localStorage.setItem(
     PRESENCE_KEY,
     JSON.stringify({
-      unlocked: isSiteUnlocked,
+      partnerOnline: isSiteUnlocked && !isKalpSorumlusuSession,
       updatedAt: new Date().toISOString(),
     })
   );
@@ -104,7 +105,7 @@ function renderPresenceBadge() {
   try {
     const parsed = JSON.parse(raw);
     const updated = parsed.updatedAt ? new Date(parsed.updatedAt).getTime() : 0;
-    const isOnline = Boolean(parsed.unlocked) && Date.now() - updated < 15000;
+    const isOnline = Boolean(parsed.partnerOnline) && Date.now() - updated < 15000;
 
     partnerPresence.textContent = isOnline ? "Sevgilin çevrimiçi" : "Sevgilin çevrimdışı";
     partnerPresence.className = `presence-badge ${isOnline ? "online" : "offline"}`;
@@ -512,6 +513,7 @@ function setAdminSession(isActive) {
   localStorage.setItem(ADMIN_SESSION_KEY, isActive ? "1" : "0");
   adminGate.classList.toggle("hidden", isActive);
   adminContent.classList.toggle("hidden", !isActive);
+  updatePresenceHeartbeat();
 
   if (isActive) {
     renderAdminList();
