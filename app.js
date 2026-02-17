@@ -39,7 +39,6 @@ const sendNotificationForm = document.getElementById("sendNotificationForm");
 const sendNotificationInfo = document.getElementById("sendNotificationInfo");
 const partnerPresence = document.getElementById("partnerPresence");
 const loveBurstLayer = document.getElementById("loveBurstLayer");
-const adminTabBtn = document.getElementById("adminTabBtn");
 const brandLogoImage = document.getElementById("brandLogoImage");
 const gateHeroImage = document.getElementById("gateHeroImage");
 
@@ -79,20 +78,6 @@ setFirstAvailableImage(gateHeroImage, [
   "hero-envelope.png",
   "hero.png",
 ]);
-
-function isAdminLinkActive() {
-  const params = new URLSearchParams(window.location.search);
-  return window.location.hash === "#yonetim" || params.get("yonetim") === "1";
-}
-
-function syncAdminTabVisibility() {
-  const showAdminTab = isAdminLinkActive();
-  adminTabBtn.classList.toggle("hidden", !showAdminTab);
-
-  if (!showAdminTab && adminTabBtn.classList.contains("active")) {
-    activateTab("create");
-  }
-}
 
 function updatePresenceHeartbeat() {
   const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
@@ -224,7 +209,6 @@ tabs.forEach((btn) => {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 });
 
-window.addEventListener("hashchange", syncAdminTabVisibility);
 window.addEventListener("storage", renderPresenceBadge);
 
 siteLoginForm.addEventListener("submit", (event) => {
@@ -546,12 +530,12 @@ adminLoginForm.addEventListener("submit", (event) => {
     return;
   }
 
-  loginInfo.textContent = "Şifre yanlış. Bu alan sadece admin kullanımına açık.";
+  loginInfo.textContent = "Şifre yanlış. Bu alan sadece Kalp Sorumlusu kullanımına açık.";
 });
 
 logoutBtn.addEventListener("click", () => {
   setAdminSession(false);
-  loginInfo.textContent = "Admin oturumu kapatıldı.";
+  loginInfo.textContent = "Kalp Sorumlusu oturumu kapatıldı.";
 });
 
 if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
@@ -560,7 +544,6 @@ if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
 
 renderTrackNotifications();
 renderTrackList();
-syncAdminTabVisibility();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
 renderPresenceBadge();
