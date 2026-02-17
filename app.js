@@ -6,6 +6,8 @@ const PRESENCE_KEY = "kalp-postasi-presence";
 const ACTIVITY_TIMELINE_KEY = "kalp-postasi-activity-timeline";
 const LOGIN_LOGS_KEY = "kalp-postasi-login-logs";
 const DAILY_MESSAGES_KEY = "kalp-postasi-daily-messages";
+const OWNER_DEVICE_KEY = "kalp-postasi-owner-device";
+const SITE_LOGIN_ACTOR_KEY = "kalp-postasi-site-login-actor";
 
 const config = window.APP_CONFIG || {};
 const FALLBACK_SITE_PASSWORD = "iremhasekisultan";
@@ -17,6 +19,19 @@ const SITE_PASSWORD = String(
 const ADMIN_PASSWORD = String(
   config.adminPassword || localStorage.getItem("kalp-postasi-admin-password") || FALLBACK_ADMIN_PASSWORD
 ).trim();
+const OWNER_SITE_PASSWORD = String(
+  config.ownerSitePassword || localStorage.getItem("kalp-postasi-owner-site-password") || ADMIN_PASSWORD
+).trim();
+const PARTNER_USERNAME = String(
+  config.partnerUsername || localStorage.getItem("kalp-postasi-partner-username") || "güzel kızım"
+)
+  .trim()
+  .toLocaleLowerCase("tr-TR");
+const OWNER_USERNAME = String(
+  config.ownerUsername || localStorage.getItem("kalp-postasi-owner-username") || "kalpsorumlusu"
+)
+  .trim()
+  .toLocaleLowerCase("tr-TR");
 
 const DEFAULT_DAILY_LOVE_MESSAGES = [
   "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
@@ -317,14 +332,36 @@ function playCelebrationBurst(mode = "soft") {
   }
 }
 
+function normalizeUsername(value) {
+  return String(value || "").trim().toLocaleLowerCase("tr-TR");
+}
+
+function resolveSiteLoginActor(username, password) {
+  const normalizedUsername = normalizeUsername(username);
+
+  if (normalizedUsername === PARTNER_USERNAME && password === SITE_PASSWORD) {
+    return "Sevgilin";
+  }
+
+  if (
+    normalizedUsername === OWNER_USERNAME &&
+    (password === OWNER_SITE_PASSWORD || password === ADMIN_PASSWORD)
+  ) {
+    return "Kalp Sorumlusu";
+  }
+
+  return "";
+}
+
 function updatePresenceHeartbeat() {
   const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
-  const isKalpSorumlusuSession = localStorage.getItem(ADMIN_SESSION_KEY) === "1";
+  const loginActor = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY);
+  const isPartnerSession = loginActor === "Sevgilin";
 
   localStorage.setItem(
     PRESENCE_KEY,
     JSON.stringify({
-      partnerOnline: isSiteUnlocked && !isKalpSorumlusuSession,
+      partnerOnline: isSiteUnlocked && isPartnerSession,
       updatedAt: new Date().toISOString(),
     })
   );
@@ -427,6 +464,10 @@ function formatDate(isoDate) {
 function setSiteSession(isActive) {
   sessionStorage.setItem(SITE_SESSION_KEY, isActive ? "1" : "0");
 
+  if (!isActive) {
+    sessionStorage.removeItem(SITE_LOGIN_ACTOR_KEY);
+  }
+
   body.classList.toggle("is-locked", !isActive);
   body.classList.toggle("is-unlocked", isActive);
   appShell.setAttribute("aria-hidden", String(!isActive));
@@ -462,12 +503,26 @@ window.addEventListener("storage", () => {
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const entered = String(siteLoginForm.elements.sitePassword.value || "").trim();
+  const enteredUsername = String(siteLoginForm.elements.siteUsername.value || "").trim();
+  const enteredPassword = String(siteLoginForm.elements.sitePassword.value || "").trim();
 
-  if (SITE_PASSWORD && entered === SITE_PASSWORD) {
+  const actor = resolveSiteLoginActor(enteredUsername, enteredPassword);
+
+  if (actor) {
+    if (actor === "Kalp Sorumlusu") {
+      localStorage.setItem(OWNER_DEVICE_KEY, "1");
+    }
+
+    sessionStorage.setItem(SITE_LOGIN_ACTOR_KEY, actor);
     setSiteSession(true);
-    addActivity("partner", "Sevgilin siteye giriş yaptı.");
-    addLoginLog("Sevgilin", "siteye giriş yaptı.");
+
+    if (actor === "Sevgilin") {
+      addActivity("partner", "Sevgilin siteye giriş yaptı.");
+    } else {
+      addActivity("admin", "Kalp Sorumlusu site girişini yaptı.");
+    }
+
+    addLoginLog(actor, "siteye giriş yaptı.");
     siteLoginInfo.textContent = "";
     siteLoginForm.reset();
     return;
@@ -487,14 +542,23 @@ siteLoginForm.addEventListener("submit", (event) => {
     return;
   }
 
-  siteLoginInfo.textContent = "Şifre yanlış. Bu alan yalnızca size özel.";
+  siteLoginInfo.textContent = "Kullanıcı adı veya şifre yanlış. Lütfen tekrar deneyin.";
 });
 
 siteLogoutBtn.addEventListener("click", () => {
+  const actor = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY) || "Site Kullanıcısı";
+
   setAdminSession(false);
   setSiteSession(false);
-  addActivity("partner", "Site kilitlendi / kullanıcı çıkış yaptı.");
-  addLoginLog("Sevgilin", "site çıkışı yaptı / site kilitlendi.");
+
+  if (actor === "Sevgilin") {
+    addActivity("partner", "Site kilitlendi / kullanıcı çıkış yaptı.");
+  } else {
+    addActivity("admin", "Kalp Sorumlusu siteyi kilitledi.");
+  }
+
+  addLoginLog(actor, "site çıkışı yaptı / site kilitlendi.");
+  sessionStorage.removeItem(SITE_LOGIN_ACTOR_KEY);
   siteLoginForm.reset();
   activateTab("create");
 });
@@ -794,6 +858,7 @@ adminLoginForm.addEventListener("submit", (event) => {
   const entered = String(adminLoginForm.elements.password.value || "").trim();
 
   if (entered === ADMIN_PASSWORD) {
+    localStorage.setItem(OWNER_DEVICE_KEY, "1");
     setAdminSession(true);
     addActivity("admin", "Kalp Sorumlusu panele giriş yaptı.");
     addLoginLog("Kalp Sorumlusu", "panele giriş yaptı.");
