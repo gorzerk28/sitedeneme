@@ -65,17 +65,21 @@ h2 {
 
 .brand-logo {
   width: auto;
-  height: 62px;
+  height: 74px;
+  max-width: min(42vw, 430px);
   object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(190, 70, 120, 0.2));
 }
 
 .gate-hero {
   width: 100%;
-  max-width: 320px;
-  margin: 2px auto 4px;
+  height: 170px;
+  margin: 2px auto 6px;
   display: block;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center 45%;
+  border-radius: 12px;
+  background: #fff7fb;
 }
 
 .card {
@@ -450,10 +454,11 @@ textarea {
   }
 
   .brand-logo {
-    height: 46px;
+    height: 54px;
+    max-width: 70vw;
   }
 
   .gate-hero {
-    max-width: 240px;
+    height: 140px;
   }
 }
