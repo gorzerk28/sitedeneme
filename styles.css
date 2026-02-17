@@ -444,6 +444,88 @@ textarea {
 }
 
 
+
+.daily-love-card {
+  margin-top: 14px;
+  border: 1px solid #f6d8e9;
+  border-radius: 14px;
+  padding: 12px;
+  background: linear-gradient(135deg, #fff3f9, #fffdfd);
+}
+
+.daily-love-text {
+  margin-top: 6px;
+  font-weight: 600;
+  color: #7d355b;
+}
+
+.love-calendar-card {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
+.love-calendar-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.calendar-item {
+  border: 1px solid #f2d4e5;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff8fc;
+}
+
+.calendar-item h4 {
+  font-size: 0.96rem;
+}
+
+.calendar-date {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #8b3d66;
+  margin-bottom: 5px;
+}
+
+.activity-timeline {
+  margin-top: 6px;
+}
+
+.activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.activity-item {
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.activity-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #d64a8a;
+  margin-top: 6px;
+}
+
+.activity-item p {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.activity-item small {
+  color: var(--muted);
+}
+
 .presence-badge {
   display: inline-flex;
   align-items: center;
@@ -495,6 +577,13 @@ textarea {
   animation: loveUp 1400ms ease-out forwards;
 }
 
+.celebration-heart {
+  position: fixed;
+  font-size: 17px;
+  opacity: 0;
+  animation: celebrationPop 1500ms ease-out forwards;
+}
+
 @keyframes loveUp {
   0% {
     transform: translateY(0) scale(0.8);
@@ -505,6 +594,20 @@ textarea {
   }
   100% {
     transform: translateY(-140px) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes celebrationPop {
+  0% {
+    transform: translateY(0) scale(0.7) rotate(0deg);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-180px) scale(1.4) rotate(18deg);
     opacity: 0;
   }
 }
@@ -546,8 +649,8 @@ textarea {
   }
 
   .tabs {
-    grid-template-columns: 1fr;
     width: 100%;
+    justify-content: stretch;
   }
 
   .tab-btn {
