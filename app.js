@@ -18,6 +18,16 @@ const ADMIN_PASSWORD = String(
   config.adminPassword || localStorage.getItem("kalp-postasi-admin-password") || FALLBACK_ADMIN_PASSWORD
 ).trim();
 
+const DEFAULT_DAILY_LOVE_MESSAGES = [
+  "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
+  "Birlikte olduğumuz her gün, en sevdiğim gün oluyor. 🌸",
+  "Küçük bir gülüşün bile bütün günümü aydınlatıyor. ☀️",
+  "Sana yazılan her talep aslında sana duyduğum sevginin başka hali. 💌",
+  "İyi ki varsın, iyi ki bizim küçük dünyamız var. 🌷",
+  "Bugün ne olursa olsun, yanında olmayı seçiyorum. 🤍",
+  "Seninle sıradan günler bile kutlama gibi geliyor. ✨",
+];
+
 const state = {
   requests: loadRequests(),
   customNotifications: loadCustomNotifications(),
@@ -99,16 +109,6 @@ setFirstAvailableImage(gateHeroImage, [
   "hero-envelope.png",
   "hero.png",
 ]);
-
-const DEFAULT_DAILY_LOVE_MESSAGES = [
-  "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
-  "Birlikte olduğumuz her gün, en sevdiğim gün oluyor. 🌸",
-  "Küçük bir gülüşün bile bütün günümü aydınlatıyor. ☀️",
-  "Sana yazılan her talep aslında sana duyduğum sevginin başka hali. 💌",
-  "İyi ki varsın, iyi ki bizim küçük dünyamız var. 🌷",
-  "Bugün ne olursa olsun, yanında olmayı seçiyorum. 🤍",
-  "Seninle sıradan günler bile kutlama gibi geliyor. ✨",
-];
 
 function getDayOfYear(date = new Date()) {
   const start = new Date(date.getFullYear(), 0, 0);
