@@ -8,8 +8,15 @@ const LOGIN_LOGS_KEY = "kalp-postasi-login-logs";
 const DAILY_MESSAGES_KEY = "kalp-postasi-daily-messages";
 
 const config = window.APP_CONFIG || {};
-const SITE_PASSWORD = config.sitePassword || "";
-const ADMIN_PASSWORD = config.adminPassword || "";
+const FALLBACK_SITE_PASSWORD = "iremhasekisultan";
+const FALLBACK_ADMIN_PASSWORD = "gorzerk28";
+
+const SITE_PASSWORD = String(
+  config.sitePassword || localStorage.getItem("kalp-postasi-site-password") || FALLBACK_SITE_PASSWORD
+).trim();
+const ADMIN_PASSWORD = String(
+  config.adminPassword || localStorage.getItem("kalp-postasi-admin-password") || FALLBACK_ADMIN_PASSWORD
+).trim();
 
 const state = {
   requests: loadRequests(),
@@ -455,7 +462,7 @@ window.addEventListener("storage", () => {
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
 
-  const entered = siteLoginForm.elements.sitePassword.value;
+  const entered = String(siteLoginForm.elements.sitePassword.value || "").trim();
 
   if (SITE_PASSWORD && entered === SITE_PASSWORD) {
     setSiteSession(true);
@@ -784,7 +791,7 @@ function setAdminSession(isActive) {
 
 adminLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const entered = adminLoginForm.elements.password.value;
+  const entered = String(adminLoginForm.elements.password.value || "").trim();
 
   if (entered === ADMIN_PASSWORD) {
     setAdminSession(true);
@@ -840,7 +847,8 @@ if (dailyMessageResetBtn) {
 }
 
 if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
-  siteLoginInfo.textContent = "Yapılandırma eksik: config.js dosyasındaki şifreleri kontrol edin.";
+  siteLoginInfo.textContent =
+    "Şifre yapılandırması yüklenemedi. config.js kontrol et veya fallback şifreleri kullan.";
 }
 
 renderDailyLoveMessage();
