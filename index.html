@@ -70,6 +70,11 @@
           <h2>Kalbinden Geçeni Yaz</h2>
           <p class="muted">Ne hissettiğini yaz, ben de özenle değerlendirip dönüş yapayım.</p>
 
+          <article class="daily-love-card" aria-live="polite">
+            <p class="eyebrow">✨ Günün Mesajı</p>
+            <p id="dailyLoveMessage" class="daily-love-text"></p>
+          </article>
+
           <form id="requestForm" class="form-grid">
             <label>
               Talep Başlığı
@@ -127,6 +132,12 @@
           <p class="muted">Durumu ve bıraktığım notları buradan kalp rahatlığıyla takip et.</p>
           <div id="trackNotifications" class="stack"></div>
           <div id="trackList" class="stack"></div>
+
+          <article class="love-calendar-card">
+            <h3>💗 Aşk Takvimi</h3>
+            <p class="muted">Yaklaşan planlarımızı kalp kalp görelim.</p>
+            <div id="loveCalendar" class="love-calendar-grid"></div>
+          </article>
         </article>
       </section>
 
@@ -151,6 +162,11 @@
           <article class="card admin-toolbar">
             <p><strong>Kalp Sorumlusu oturumu açık</strong> <span id="partnerPresence" class="presence-badge offline">Sevgilin çevrimdışı</span></p>
             <button id="logoutBtn" class="btn-ghost">Kalp Sorumlusu Çıkışı</button>
+          </article>
+
+          <article class="card">
+            <h2>🕰️ Partner Aktivite Zaman Çizgisi</h2>
+            <div id="activityTimeline" class="activity-timeline"></div>
           </article>
 
           <article class="card notify-send-card">
