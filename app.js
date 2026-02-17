@@ -2,6 +2,7 @@ const STORAGE_KEY = "kalp-postasi-requests";
 const CUSTOM_NOTIFICATIONS_KEY = "kalp-postasi-custom-notifications";
 const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
+const PRESENCE_KEY = "kalp-postasi-presence";
 
 const config = window.APP_CONFIG || {};
 const SITE_PASSWORD = config.sitePassword || "";
@@ -36,6 +37,9 @@ const adminContent = document.getElementById("adminContent");
 const logoutBtn = document.getElementById("logoutBtn");
 const sendNotificationForm = document.getElementById("sendNotificationForm");
 const sendNotificationInfo = document.getElementById("sendNotificationInfo");
+const partnerPresence = document.getElementById("partnerPresence");
+const loveBurstLayer = document.getElementById("loveBurstLayer");
+const adminTabBtn = document.getElementById("adminTabBtn");
 const brandLogoImage = document.getElementById("brandLogoImage");
 const gateHeroImage = document.getElementById("gateHeroImage");
 
@@ -75,6 +79,75 @@ setFirstAvailableImage(gateHeroImage, [
   "hero-envelope.png",
   "hero.png",
 ]);
+
+function isAdminLinkActive() {
+  const params = new URLSearchParams(window.location.search);
+  return window.location.hash === "#yonetim" || params.get("yonetim") === "1";
+}
+
+function syncAdminTabVisibility() {
+  const showAdminTab = isAdminLinkActive();
+  adminTabBtn.classList.toggle("hidden", !showAdminTab);
+
+  if (!showAdminTab && adminTabBtn.classList.contains("active")) {
+    activateTab("create");
+  }
+}
+
+function updatePresenceHeartbeat() {
+  const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
+
+  localStorage.setItem(
+    PRESENCE_KEY,
+    JSON.stringify({
+      unlocked: isSiteUnlocked,
+      updatedAt: new Date().toISOString(),
+    })
+  );
+}
+
+function renderPresenceBadge() {
+  if (!partnerPresence) return;
+
+  const raw = localStorage.getItem(PRESENCE_KEY);
+  if (!raw) {
+    partnerPresence.textContent = "Sevgilin çevrimdışı";
+    partnerPresence.className = "presence-badge offline";
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    const updated = parsed.updatedAt ? new Date(parsed.updatedAt).getTime() : 0;
+    const isOnline = Boolean(parsed.unlocked) && Date.now() - updated < 15000;
+
+    partnerPresence.textContent = isOnline ? "Sevgilin çevrimiçi" : "Sevgilin çevrimdışı";
+    partnerPresence.className = `presence-badge ${isOnline ? "online" : "offline"}`;
+  } catch {
+    partnerPresence.textContent = "Sevgilin çevrimdışı";
+    partnerPresence.className = "presence-badge offline";
+  }
+}
+
+function playLoveBurst() {
+  if (!loveBurstLayer) return;
+
+  const burstCount = 18;
+  for (let i = 0; i < burstCount; i += 1) {
+    const heart = document.createElement("span");
+    heart.className = "love-heart";
+    heart.textContent = i % 3 === 0 ? "💖" : i % 3 === 1 ? "💗" : "💘";
+
+    const x = 20 + Math.random() * 60;
+    const y = 70 + Math.random() * 12;
+    heart.style.left = `${x}%`;
+    heart.style.top = `${y}%`;
+    heart.style.animationDelay = `${Math.random() * 180}ms`;
+
+    loveBurstLayer.appendChild(heart);
+    setTimeout(() => heart.remove(), 1600);
+  }
+}
 
 function loadRequests() {
   const raw = localStorage.getItem(STORAGE_KEY);
@@ -133,6 +206,8 @@ function setSiteSession(isActive) {
   body.classList.toggle("is-locked", !isActive);
   body.classList.toggle("is-unlocked", isActive);
   appShell.setAttribute("aria-hidden", String(!isActive));
+  updatePresenceHeartbeat();
+  renderPresenceBadge();
 }
 
 function activateTab(tabId) {
@@ -148,6 +223,9 @@ function activateTab(tabId) {
 tabs.forEach((btn) => {
   btn.addEventListener("click", () => activateTab(btn.dataset.tab));
 });
+
+window.addEventListener("hashchange", syncAdminTabVisibility);
+window.addEventListener("storage", renderPresenceBadge);
 
 siteLoginForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -442,6 +520,7 @@ requestForm.addEventListener("submit", (event) => {
   renderTrackNotifications();
   renderTrackList();
   renderAdminList();
+  playLoveBurst();
   activateTab("track");
 });
 
@@ -452,6 +531,7 @@ function setAdminSession(isActive) {
 
   if (isActive) {
     renderAdminList();
+    renderPresenceBadge();
   }
 }
 
@@ -480,5 +560,9 @@ if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
 
 renderTrackNotifications();
 renderTrackList();
+syncAdminTabVisibility();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
+renderPresenceBadge();
+setInterval(updatePresenceHeartbeat, 5000);
+setInterval(renderPresenceBadge, 5000);
