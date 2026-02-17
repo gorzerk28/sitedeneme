@@ -63,11 +63,21 @@ h2 {
   gap: 12px;
 }
 
+.brand-logo-frame {
+  width: 210px;
+  height: 84px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .brand-logo {
   width: auto;
-  height: 74px;
-  max-width: min(42vw, 430px);
+  height: 84px;
   object-fit: contain;
+  transform: scale(2.05);
+  transform-origin: left center;
   filter: drop-shadow(0 2px 6px rgba(190, 70, 120, 0.2));
 }
 
@@ -453,9 +463,14 @@ textarea {
     padding: 20px;
   }
 
+  .brand-logo-frame {
+    width: 150px;
+    height: 64px;
+  }
+
   .brand-logo {
-    height: 54px;
-    max-width: 70vw;
+    height: 64px;
+    transform: scale(1.85);
   }
 
   .gate-hero {
