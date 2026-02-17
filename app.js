@@ -4,6 +4,8 @@ const ADMIN_SESSION_KEY = "kalp-postasi-admin-session";
 const SITE_SESSION_KEY = "kalp-postasi-site-session";
 const PRESENCE_KEY = "kalp-postasi-presence";
 const ACTIVITY_TIMELINE_KEY = "kalp-postasi-activity-timeline";
+const LOGIN_LOGS_KEY = "kalp-postasi-login-logs";
+const DAILY_MESSAGES_KEY = "kalp-postasi-daily-messages";
 
 const config = window.APP_CONFIG || {};
 const SITE_PASSWORD = config.sitePassword || "";
@@ -13,6 +15,8 @@ const state = {
   requests: loadRequests(),
   customNotifications: loadCustomNotifications(),
   activityTimeline: loadActivityTimeline(),
+  loginLogs: loadLoginLogs(),
+  dailyMessages: loadDailyMessages(),
   failedSiteAttempts: 0,
 };
 
@@ -46,6 +50,11 @@ const gateHeroImage = document.getElementById("gateHeroImage");
 const dailyLoveMessage = document.getElementById("dailyLoveMessage");
 const loveCalendar = document.getElementById("loveCalendar");
 const activityTimeline = document.getElementById("activityTimeline");
+const loginLogs = document.getElementById("loginLogs");
+const dailyMessageForm = document.getElementById("dailyMessageForm");
+const dailyMessageInput = document.getElementById("dailyMessageInput");
+const dailyMessageInfo = document.getElementById("dailyMessageInfo");
+const dailyMessageResetBtn = document.getElementById("dailyMessageResetBtn");
 
 function setFirstAvailableImage(imgEl, candidates) {
   if (!imgEl) return;
@@ -84,7 +93,7 @@ setFirstAvailableImage(gateHeroImage, [
   "hero.png",
 ]);
 
-const DAILY_LOVE_MESSAGES = [
+const DEFAULT_DAILY_LOVE_MESSAGES = [
   "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
   "Birlikte olduğumuz her gün, en sevdiğim gün oluyor. 🌸",
   "Küçük bir gülüşün bile bütün günümü aydınlatıyor. ☀️",
@@ -104,8 +113,12 @@ function getDayOfYear(date = new Date()) {
 function renderDailyLoveMessage() {
   if (!dailyLoveMessage) return;
 
-  const index = getDayOfYear() % DAILY_LOVE_MESSAGES.length;
-  dailyLoveMessage.textContent = DAILY_LOVE_MESSAGES[index];
+  if (!state.dailyMessages.length) {
+    state.dailyMessages = [...DEFAULT_DAILY_LOVE_MESSAGES];
+  }
+
+  const index = getDayOfYear() % state.dailyMessages.length;
+  dailyLoveMessage.textContent = state.dailyMessages[index];
 }
 
 function loadActivityTimeline() {
@@ -123,6 +136,90 @@ function loadActivityTimeline() {
 
 function saveActivityTimeline() {
   localStorage.setItem(ACTIVITY_TIMELINE_KEY, JSON.stringify(state.activityTimeline));
+}
+
+function loadDailyMessages() {
+  const raw = localStorage.getItem(DAILY_MESSAGES_KEY);
+  if (!raw) return [...DEFAULT_DAILY_LOVE_MESSAGES];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_DAILY_LOVE_MESSAGES];
+
+    const sanitized = parsed.map((item) => String(item).trim()).filter(Boolean);
+    return sanitized.length ? sanitized : [...DEFAULT_DAILY_LOVE_MESSAGES];
+  } catch {
+    return [...DEFAULT_DAILY_LOVE_MESSAGES];
+  }
+}
+
+function saveDailyMessages() {
+  localStorage.setItem(DAILY_MESSAGES_KEY, JSON.stringify(state.dailyMessages));
+}
+
+function loadLoginLogs() {
+  const raw = localStorage.getItem(LOGIN_LOGS_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch {
+    return [];
+  }
+}
+
+function saveLoginLogs() {
+  localStorage.setItem(LOGIN_LOGS_KEY, JSON.stringify(state.loginLogs));
+}
+
+function addLoginLog(actor, action) {
+  const item = {
+    id: `l-${Date.now().toString(36)}`,
+    actor,
+    action,
+    createdAt: new Date().toISOString(),
+  };
+
+  state.loginLogs.unshift(item);
+  state.loginLogs = state.loginLogs.slice(0, 200);
+  saveLoginLogs();
+  renderLoginLogs();
+}
+
+function renderLoginLogs() {
+  if (!loginLogs) return;
+
+  loginLogs.innerHTML = "";
+
+  if (!state.loginLogs.length) {
+    loginLogs.innerHTML = '<p class="muted">Henüz giriş kaydı yok.</p>';
+    return;
+  }
+
+  const list = document.createElement("ul");
+  list.className = "activity-list";
+
+  state.loginLogs.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "activity-item";
+    const dateText = new Date(item.createdAt).toLocaleString("tr-TR", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    li.innerHTML = `<span class="activity-dot"></span><div><p><strong>${item.actor}</strong> ${item.action}</p><small>${dateText}</small></div>`;
+    list.appendChild(li);
+  });
+
+  loginLogs.appendChild(list);
+}
+
+function renderDailyMessageEditor() {
+  if (!dailyMessageInput) return;
+  dailyMessageInput.value = state.dailyMessages.join("\n");
 }
 
 function addActivity(type, text) {
@@ -347,7 +444,12 @@ tabs.forEach((btn) => {
 window.addEventListener("storage", () => {
   renderPresenceBadge();
   state.activityTimeline = loadActivityTimeline();
+  state.loginLogs = loadLoginLogs();
+  state.dailyMessages = loadDailyMessages();
   renderActivityTimeline();
+  renderLoginLogs();
+  renderDailyLoveMessage();
+  renderDailyMessageEditor();
 });
 
 siteLoginForm.addEventListener("submit", (event) => {
@@ -358,6 +460,7 @@ siteLoginForm.addEventListener("submit", (event) => {
   if (SITE_PASSWORD && entered === SITE_PASSWORD) {
     setSiteSession(true);
     addActivity("partner", "Sevgilin siteye giriş yaptı.");
+    addLoginLog("Sevgilin", "siteye giriş yaptı.");
     siteLoginInfo.textContent = "";
     siteLoginForm.reset();
     return;
@@ -384,6 +487,7 @@ siteLogoutBtn.addEventListener("click", () => {
   setAdminSession(false);
   setSiteSession(false);
   addActivity("partner", "Site kilitlendi / kullanıcı çıkış yaptı.");
+  addLoginLog("Sevgilin", "site çıkışı yaptı / site kilitlendi.");
   siteLoginForm.reset();
   activateTab("create");
 });
@@ -685,6 +789,7 @@ adminLoginForm.addEventListener("submit", (event) => {
   if (entered === ADMIN_PASSWORD) {
     setAdminSession(true);
     addActivity("admin", "Kalp Sorumlusu panele giriş yaptı.");
+    addLoginLog("Kalp Sorumlusu", "panele giriş yaptı.");
     loginInfo.textContent = "";
     adminLoginForm.reset();
     return;
@@ -696,17 +801,54 @@ adminLoginForm.addEventListener("submit", (event) => {
 logoutBtn.addEventListener("click", () => {
   setAdminSession(false);
   addActivity("admin", "Kalp Sorumlusu panelden çıkış yaptı.");
+  addLoginLog("Kalp Sorumlusu", "panelden çıkış yaptı.");
   loginInfo.textContent = "Kalp Sorumlusu oturumu kapatıldı.";
 });
+
+if (dailyMessageForm) {
+  dailyMessageForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const lines = dailyMessageInput.value
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (!lines.length) {
+      dailyMessageInfo.textContent = "En az bir mesaj girmelisin.";
+      return;
+    }
+
+    state.dailyMessages = lines;
+    saveDailyMessages();
+    renderDailyLoveMessage();
+    renderDailyMessageEditor();
+    dailyMessageInfo.textContent = "Günün mesajı listesi güncellendi 💖";
+    addActivity("admin", "Günün mesajları güncellendi.");
+  });
+}
+
+if (dailyMessageResetBtn) {
+  dailyMessageResetBtn.addEventListener("click", () => {
+    state.dailyMessages = [...DEFAULT_DAILY_LOVE_MESSAGES];
+    localStorage.removeItem(DAILY_MESSAGES_KEY);
+    renderDailyLoveMessage();
+    renderDailyMessageEditor();
+    dailyMessageInfo.textContent = "Varsayılan romantik sözlere dönüldü.";
+    addActivity("admin", "Günün mesajları varsayılana döndürüldü.");
+  });
+}
 
 if (!SITE_PASSWORD || !ADMIN_PASSWORD) {
   siteLoginInfo.textContent = "Yapılandırma eksik: config.js dosyasındaki şifreleri kontrol edin.";
 }
 
 renderDailyLoveMessage();
+renderDailyMessageEditor();
 renderTrackNotifications();
 renderTrackList();
 renderActivityTimeline();
+renderLoginLogs();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
 renderPresenceBadge();
