@@ -169,6 +169,28 @@
             <div id="activityTimeline" class="activity-timeline"></div>
           </article>
 
+          <article class="card">
+            <h2>🔐 Giriş Log Kayıtları</h2>
+            <p class="muted">Partner ve Kalp Sorumlusu giriş/çıkış kayıtları burada saklanır.</p>
+            <div id="loginLogs" class="activity-timeline"></div>
+          </article>
+
+          <article class="card">
+            <h2>📝 Günün Mesajı Ayarları</h2>
+            <p class="muted">Her satıra bir romantik söz yaz. Kaydettiğinde günlük mesajlar bu listeden döner.</p>
+            <form id="dailyMessageForm" class="admin-form">
+              <label>
+                Günlük Mesaj Listesi (satır satır)
+                <textarea id="dailyMessageInput" name="dailyMessages" rows="6" required></textarea>
+              </label>
+              <div class="admin-actions">
+                <button class="btn-primary" type="submit">Mesajları Kaydet 💞</button>
+                <button id="dailyMessageResetBtn" class="btn-ghost" type="button">Varsayılan Sözlere Dön</button>
+              </div>
+              <p id="dailyMessageInfo" class="muted" aria-live="polite"></p>
+            </form>
+          </article>
+
           <article class="card notify-send-card">
             <h2>Sevgiline Bildirim Gönder</h2>
             <p class="muted">Kalpte anında görünecek kısa bir not bırak.</p>
