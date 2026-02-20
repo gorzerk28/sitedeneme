@@ -27,7 +27,7 @@
             <input
               type="text"
               name="siteUsername"
-              placeholder="kullanıcı adınız"
+              placeholder="Kullanıcı adın"
               autocomplete="username"
               required
             />
@@ -171,6 +171,11 @@
         <div id="adminContent" class="hidden">
           <article class="card admin-toolbar">
             <p><strong>Kalp Sorumlusu oturumu açık</strong> <span id="partnerPresence" class="presence-badge offline">Sevgilin çevrimdışı</span></p>
+            <p>
+              <strong>Mail Gönderim Durumu:</strong>
+              <span id="mailStatusBadge" class="presence-badge offline">Kontrol ediliyor</span>
+            </p>
+            <p id="mailStatusHint" class="muted"></p>
             <button id="logoutBtn" class="btn-ghost">Kalp Sorumlusu Çıkışı</button>
           </article>
 
@@ -275,6 +280,7 @@
           <div class="admin-actions">
             <button class="btn-primary" type="submit">Güncelle</button>
             <button class="btn-ghost" type="button" data-role="notifyBtn">Bildirim Hazırla</button>
+            <button class="btn-ghost" type="button" data-role="mailBtn">Mail Gönder 💌</button>
             <button class="btn-danger" type="button" data-role="deleteBtn">Talebi Sil</button>
           </div>
           <p class="muted" data-role="notifyInfo"></p>
