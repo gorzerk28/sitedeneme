@@ -23,7 +23,7 @@ const OWNER_SITE_PASSWORD = String(
   config.ownerSitePassword || localStorage.getItem("kalp-postasi-owner-site-password") || ADMIN_PASSWORD
 ).trim();
 const PARTNER_USERNAME = String(
-  config.partnerUsername || localStorage.getItem("kalp-postasi-partner-username") || "güzel kızım"
+  config.partnerUsername || localStorage.getItem("kalp-postasi-partner-username") || "partner"
 )
   .trim()
   .toLocaleLowerCase("tr-TR");
@@ -32,6 +32,39 @@ const OWNER_USERNAME = String(
 )
   .trim()
   .toLocaleLowerCase("tr-TR");
+
+const SYNC_MODE = (() => {
+  const rawMode = String(config.syncMode || "local").trim().toLowerCase();
+  if (["local", "remote", "auto"].includes(rawMode)) return rawMode;
+  return "local";
+})();
+
+function resolveRemoteStateEndpoint() {
+  const configuredBase = String(config.apiBaseUrl || "").trim();
+
+  if (!configuredBase) {
+    return `${window.location.origin}/api/state`;
+  }
+
+  const normalizedBase = configuredBase.replace(/\/+$/, "");
+  return normalizedBase.endsWith("/api/state")
+    ? normalizedBase
+    : `${normalizedBase}/api/state`;
+}
+
+const REMOTE_STATE_ENDPOINT = resolveRemoteStateEndpoint();
+const NOTIFY_ENDPOINT = REMOTE_STATE_ENDPOINT.replace(/\/api\/state$/, "/api/notify");
+const REMOTE_STATE_IS_SAME_ORIGIN = (() => {
+  try {
+    return new URL(REMOTE_STATE_ENDPOINT, window.location.origin).origin === window.location.origin;
+  } catch {
+    return false;
+  }
+})();
+const REMOTE_FETCH_CREDENTIALS = REMOTE_STATE_IS_SAME_ORIGIN ? "same-origin" : "include";
+const PARTNER_EMAIL = String(config.partnerEmail || "").trim();
+let remoteSyncEnabled = SYNC_MODE !== "local";
+let hasWarnedRemoteUnavailable = false;
 
 const DEFAULT_DAILY_LOVE_MESSAGES = [
   "Bugün de kalbim seninle aynı ritimde atıyor. 💓",
@@ -87,6 +120,8 @@ const dailyMessageForm = document.getElementById("dailyMessageForm");
 const dailyMessageInput = document.getElementById("dailyMessageInput");
 const dailyMessageInfo = document.getElementById("dailyMessageInfo");
 const dailyMessageResetBtn = document.getElementById("dailyMessageResetBtn");
+const mailStatusBadge = document.getElementById("mailStatusBadge");
+const mailStatusHint = document.getElementById("mailStatusHint");
 
 function setFirstAvailableImage(imgEl, candidates) {
   if (!imgEl) return;
@@ -158,6 +193,7 @@ function loadActivityTimeline() {
 
 function saveActivityTimeline() {
   localStorage.setItem(ACTIVITY_TIMELINE_KEY, JSON.stringify(state.activityTimeline));
+  queueRemotePush();
 }
 
 function loadDailyMessages() {
@@ -177,6 +213,7 @@ function loadDailyMessages() {
 
 function saveDailyMessages() {
   localStorage.setItem(DAILY_MESSAGES_KEY, JSON.stringify(state.dailyMessages));
+  queueRemotePush();
 }
 
 function loadLoginLogs() {
@@ -194,6 +231,7 @@ function loadLoginLogs() {
 
 function saveLoginLogs() {
   localStorage.setItem(LOGIN_LOGS_KEY, JSON.stringify(state.loginLogs));
+  queueRemotePush();
 }
 
 function addLoginLog(actor, action) {
@@ -332,6 +370,117 @@ function playCelebrationBurst(mode = "soft") {
   }
 }
 
+function getSerializableState() {
+  return {
+    requests: state.requests,
+    customNotifications: state.customNotifications,
+    activityTimeline: state.activityTimeline,
+    loginLogs: state.loginLogs,
+    dailyMessages: state.dailyMessages,
+  };
+}
+
+function applyRemoteState(remote) {
+  if (!remote || typeof remote !== "object") return;
+
+  state.requests = Array.isArray(remote.requests) ? remote.requests : state.requests;
+  state.customNotifications = Array.isArray(remote.customNotifications)
+    ? remote.customNotifications
+    : state.customNotifications;
+  state.activityTimeline = Array.isArray(remote.activityTimeline)
+    ? remote.activityTimeline
+    : state.activityTimeline;
+  state.loginLogs = Array.isArray(remote.loginLogs) ? remote.loginLogs : state.loginLogs;
+  state.dailyMessages = Array.isArray(remote.dailyMessages) && remote.dailyMessages.length
+    ? remote.dailyMessages
+    : state.dailyMessages;
+
+  suppressRemotePush = true;
+  saveRequests();
+  saveCustomNotifications();
+  saveActivityTimeline();
+  saveLoginLogs();
+  saveDailyMessages();
+  suppressRemotePush = false;
+
+  renderTrackNotifications();
+  renderTrackList();
+  renderAdminList();
+  renderActivityTimeline();
+  renderLoginLogs();
+  renderDailyLoveMessage();
+  renderDailyMessageEditor();
+}
+
+let remotePushTimer = null;
+let suppressRemotePush = false;
+
+function notifyRemoteUnavailable() {
+  if (SYNC_MODE !== "auto" || hasWarnedRemoteUnavailable) return;
+  hasWarnedRemoteUnavailable = true;
+  if (siteLoginInfo && !siteLoginInfo.textContent) {
+    siteLoginInfo.textContent = "Sunucu senkronu bulunamadı, yerel modda devam ediliyor.";
+  }
+}
+
+function queueRemotePush() {
+  if (suppressRemotePush || !remoteSyncEnabled) return;
+  if (remotePushTimer) clearTimeout(remotePushTimer);
+  remotePushTimer = setTimeout(pushRemoteState, 250);
+}
+
+async function pushRemoteState() {
+  if (!remoteSyncEnabled) return;
+
+  try {
+    const response = await fetch(REMOTE_STATE_ENDPOINT, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(getSerializableState()),
+      credentials: REMOTE_FETCH_CREDENTIALS,
+    });
+
+    if (!response.ok && SYNC_MODE === "auto") {
+      remoteSyncEnabled = false;
+      notifyRemoteUnavailable();
+    }
+  } catch {
+    if (SYNC_MODE === "auto") {
+      remoteSyncEnabled = false;
+      notifyRemoteUnavailable();
+    }
+    // Remote API unavailable: continue with local state.
+  }
+}
+
+async function pullRemoteState() {
+  if (!remoteSyncEnabled) return;
+
+  try {
+    const response = await fetch(REMOTE_STATE_ENDPOINT, {
+      cache: "no-store",
+      credentials: REMOTE_FETCH_CREDENTIALS,
+    });
+
+    if (!response.ok) {
+      if (SYNC_MODE === "auto") {
+        remoteSyncEnabled = false;
+        notifyRemoteUnavailable();
+      }
+      return;
+    }
+
+    const remote = await response.json();
+    applyRemoteState(remote);
+  } catch {
+    if (SYNC_MODE === "auto") {
+      remoteSyncEnabled = false;
+      notifyRemoteUnavailable();
+    }
+    // Remote API unavailable: continue with local state.
+  }
+}
+
 function normalizeUsername(value) {
   return String(value || "").trim().toLocaleLowerCase("tr-TR");
 }
@@ -446,10 +595,12 @@ function loadCustomNotifications() {
 
 function saveRequests() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state.requests));
+  queueRemotePush();
 }
 
 function saveCustomNotifications() {
   localStorage.setItem(CUSTOM_NOTIFICATIONS_KEY, JSON.stringify(state.customNotifications));
+  queueRemotePush();
 }
 
 function formatDate(isoDate) {
@@ -690,6 +841,96 @@ function buildNotificationText(item, status, result) {
   return `💌 Kalp Postası Güncellemesi\nTalep: ${item.title}\nDurum: ${status}\nNot: ${result || "Not eklenmedi"}`;
 }
 
+async function renderMailSetupStatus() {
+  if (!mailStatusBadge || !mailStatusHint) return;
+
+  if (!PARTNER_EMAIL) {
+    mailStatusBadge.textContent = "Hazır Değil";
+    mailStatusBadge.classList.add("offline");
+    mailStatusBadge.classList.remove("online");
+    mailStatusHint.textContent = "1) config.js içinde partnerEmail alanını doldur.";
+    return;
+  }
+
+  try {
+    const response = await fetch(`${NOTIFY_ENDPOINT}/status`, {
+      cache: "no-store",
+      credentials: REMOTE_FETCH_CREDENTIALS,
+    });
+
+    if (!response.ok) throw new Error("status endpoint unavailable");
+
+    const payload = await response.json();
+
+    if (payload.ready) {
+      mailStatusBadge.textContent = "Hazır";
+      mailStatusBadge.classList.remove("offline");
+      mailStatusBadge.classList.add("online");
+      mailStatusHint.textContent = `Alıcı: ${PARTNER_EMAIL}`;
+      return;
+    }
+
+    mailStatusBadge.textContent = "Hazır Değil";
+    mailStatusBadge.classList.add("offline");
+    mailStatusBadge.classList.remove("online");
+    const missing = Array.isArray(payload.missing) ? payload.missing.join(", ") : "Render env ayarları";
+    mailStatusHint.textContent = `2) Render Environment'a şunları ekle: ${missing}`;
+  } catch {
+    mailStatusBadge.textContent = "Kontrol Edilemedi";
+    mailStatusBadge.classList.add("offline");
+    mailStatusBadge.classList.remove("online");
+    mailStatusHint.textContent = "Render backend erişimi yok. Önce sunucu bağlantısını kontrol et.";
+  }
+}
+
+function buildEmailBody(item, status, result) {
+  return [
+    "Merhaba bir tanem 💖",
+    "",
+    `Talebin güncellendi: ${item.title}`,
+    `Yeni durum: ${status}`,
+    `Sonuç notu: ${result || "Not eklenmedi"}`,
+    "",
+    "Detayları Talep Takip ekranından görebilirsin.",
+  ].join("\n");
+}
+
+async function sendEmailNotification(item, status, result) {
+  if (!PARTNER_EMAIL) {
+    return { ok: false, message: "Önce config.js içinde partnerEmail alanını doldur." };
+  }
+
+  try {
+    const response = await fetch(NOTIFY_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: REMOTE_FETCH_CREDENTIALS,
+      body: JSON.stringify({
+        channel: "email",
+        to: PARTNER_EMAIL,
+        subject: `Talebin cevaplandı: ${item.title}`,
+        text: buildEmailBody(item, status, result),
+      }),
+    });
+
+    if (response.ok) {
+      return { ok: true, message: "Mail gönderildi 💌" };
+    }
+    const errorPayload = await response.json().catch(() => ({}));
+    return {
+      ok: false,
+      message:
+        errorPayload.hint ||
+        "Otomatik mail gönderilemedi. Render ortam değişkenlerini kontrol et (EMAIL_PROVIDER/RESEND_API_KEY/EMAIL_FROM).",
+    };
+  } catch {
+    return {
+      ok: false,
+      message: "Sunucuya bağlanılamadı. Otomatik gönderim için Render servisinin ayakta olduğundan emin ol.",
+    };
+  }
+}
+
 function createAdminCard(item) {
   const template = document.getElementById("adminItemTemplate");
   const node = template.content.firstElementChild.cloneNode(true);
@@ -708,6 +949,7 @@ function createAdminCard(item) {
 
   const form = node.querySelector('[data-role="updateForm"]');
   const notifyBtn = node.querySelector('[data-role="notifyBtn"]');
+  const mailBtn = node.querySelector('[data-role="mailBtn"]');
   const deleteBtn = node.querySelector('[data-role="deleteBtn"]');
   const notifyInfo = node.querySelector('[data-role="notifyInfo"]');
 
@@ -750,6 +992,18 @@ function createAdminCard(item) {
     } catch {
       notifyInfo.textContent = "Panoya kopyalama başarısız. Elle kopyalayarak gönderebilirsin.";
     }
+  });
+
+  mailBtn.addEventListener("click", async () => {
+    mailBtn.disabled = true;
+    const status = form.elements.status.value;
+    const result = form.elements.result.value.trim();
+
+    const sendResult = await sendEmailNotification(item, status, result);
+    notifyInfo.textContent = sendResult.message;
+
+    addActivity("admin", `Mail bildirimi denendi: ${item.title}`);
+    mailBtn.disabled = false;
   });
 
   deleteBtn.addEventListener("click", () => {
@@ -847,6 +1101,7 @@ function setAdminSession(isActive) {
   updatePresenceHeartbeat();
 
   if (isActive) {
+    renderMailSetupStatus();
     renderAdminList();
     renderPresenceBadge();
     renderActivityTimeline();
@@ -922,8 +1177,14 @@ renderTrackNotifications();
 renderTrackList();
 renderActivityTimeline();
 renderLoginLogs();
+renderMailSetupStatus();
 setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
 renderPresenceBadge();
+if (remoteSyncEnabled) {
+  pullRemoteState();
+  setInterval(pullRemoteState, 7000);
+}
+
 setInterval(updatePresenceHeartbeat, 5000);
 setInterval(renderPresenceBadge, 5000);
