@@ -8,7 +8,7 @@ window.APP_CONFIG = {
   ownerUsername: "kalpsorumlusu",
   ownerSitePassword: "gorzerk28",
   // Talep cevaplandığında bildirimin gideceği e-posta
-  partnerEmail: "",
+  partnerEmail: "dogukannoner@hotmail.com",
   // Senkron modu:
   // local  -> klasik hosting paketi için en uygun, tamamen tarayıcı localStorage modu.
   // remote -> /api/state endpoint'ine zorunlu senkron.
