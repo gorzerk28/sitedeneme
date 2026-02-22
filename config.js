@@ -8,12 +8,12 @@ window.APP_CONFIG = {
   ownerUsername: "kalpsorumlusu",
   ownerSitePassword: "gorzerk28",
   // Talep cevaplandığında bildirimin gideceği e-posta
-  partnerEmail: "dogukannoner@hotmail.com",
+  partnerEmail: "",
   // Senkron modu:
-  // local  -> klasik hosting paketi için en uygun, tamamen tarayıcı localStorage modu.
-  // remote -> /api/state endpoint'ine zorunlu senkron.
+  // local  -> sadece bu cihazda çalışır (farklı cihazda talep görünmez).
+  // remote -> farklı cihazların aynı talepleri görmesi için zorunlu.
   // auto   -> /api/state varsa kullanır, yoksa local moda düşer.
-  syncMode: "local",
+  syncMode: "remote",
 
   // (Opsiyonel) Farklı bir backend adresi kullanacaksan buraya yazabilirsin.
   // syncMode remote/auto iken boş bırakırsan otomatik olarak bu sitenin kendi /api/state adresi kullanılır.
