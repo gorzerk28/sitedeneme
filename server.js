@@ -31,6 +31,10 @@ function defaultState() {
     activityTimeline: [],
     loginLogs: [],
     dailyMessages: [],
+    partnerPresence: {
+      partnerOnline: false,
+      updatedAt: null,
+    },
     updatedAt: new Date().toISOString(),
   };
 }
@@ -55,6 +59,10 @@ function readState() {
       activityTimeline: Array.isArray(parsed.activityTimeline) ? parsed.activityTimeline : [],
       loginLogs: Array.isArray(parsed.loginLogs) ? parsed.loginLogs : [],
       dailyMessages: Array.isArray(parsed.dailyMessages) ? parsed.dailyMessages : [],
+      partnerPresence:
+        parsed.partnerPresence && typeof parsed.partnerPresence === "object"
+          ? parsed.partnerPresence
+          : { partnerOnline: false, updatedAt: null },
     };
   } catch {
     return defaultState();
@@ -71,6 +79,10 @@ function writeState(next) {
     activityTimeline: Array.isArray(next.activityTimeline) ? next.activityTimeline : [],
     loginLogs: Array.isArray(next.loginLogs) ? next.loginLogs : [],
     dailyMessages: Array.isArray(next.dailyMessages) ? next.dailyMessages : [],
+    partnerPresence:
+      next.partnerPresence && typeof next.partnerPresence === "object"
+        ? next.partnerPresence
+        : { partnerOnline: false, updatedAt: null },
     updatedAt: new Date().toISOString(),
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(safe, null, 2));
