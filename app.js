@@ -82,6 +82,7 @@ const state = {
   activityTimeline: loadActivityTimeline(),
   loginLogs: loadLoginLogs(),
   dailyMessages: loadDailyMessages(),
+  partnerPresence: loadPartnerPresence(),
   failedSiteAttempts: 0,
 };
 
@@ -377,6 +378,7 @@ function getSerializableState() {
     activityTimeline: state.activityTimeline,
     loginLogs: state.loginLogs,
     dailyMessages: state.dailyMessages,
+    partnerPresence: state.partnerPresence,
   };
 }
 
@@ -394,6 +396,9 @@ function applyRemoteState(remote) {
   state.dailyMessages = Array.isArray(remote.dailyMessages) && remote.dailyMessages.length
     ? remote.dailyMessages
     : state.dailyMessages;
+  state.partnerPresence = remote.partnerPresence && typeof remote.partnerPresence === "object"
+    ? remote.partnerPresence
+    : state.partnerPresence;
 
   suppressRemotePush = true;
   saveRequests();
@@ -401,6 +406,7 @@ function applyRemoteState(remote) {
   saveActivityTimeline();
   saveLoginLogs();
   saveDailyMessages();
+  savePartnerPresence();
   suppressRemotePush = false;
 
   renderTrackNotifications();
@@ -416,10 +422,20 @@ let remotePushTimer = null;
 let suppressRemotePush = false;
 
 function notifyRemoteUnavailable() {
-  if (SYNC_MODE !== "auto" || hasWarnedRemoteUnavailable) return;
+  if (hasWarnedRemoteUnavailable) return;
   hasWarnedRemoteUnavailable = true;
-  if (siteLoginInfo && !siteLoginInfo.textContent) {
-    siteLoginInfo.textContent = "Sunucu senkronu bulunamadı, yerel modda devam ediliyor.";
+  if (!siteLoginInfo) return;
+
+  if (SYNC_MODE === "auto") {
+    if (!siteLoginInfo.textContent) {
+      siteLoginInfo.textContent = "Sunucu senkronu bulunamadı, yerel modda devam ediliyor.";
+    }
+    return;
+  }
+
+  if (SYNC_MODE === "remote") {
+    siteLoginInfo.textContent =
+      "Sunucu bağlantısı yok. Farklı cihaz senkronu için Render servisinin açık olduğundan emin ol.";
   }
 }
 
@@ -507,29 +523,27 @@ function updatePresenceHeartbeat() {
   const loginActor = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY);
   const isPartnerSession = loginActor === "Sevgilin";
 
-  localStorage.setItem(
-    PRESENCE_KEY,
-    JSON.stringify({
-      partnerOnline: isSiteUnlocked && isPartnerSession,
-      updatedAt: new Date().toISOString(),
-    })
-  );
+  state.partnerPresence = {
+    partnerOnline: isSiteUnlocked && isPartnerSession,
+    updatedAt: new Date().toISOString(),
+  };
+
+  savePartnerPresence();
 }
 
 function renderPresenceBadge() {
   if (!partnerPresence) return;
 
-  const raw = localStorage.getItem(PRESENCE_KEY);
-  if (!raw) {
+  const source = state.partnerPresence || loadPartnerPresence();
+  if (!source) {
     partnerPresence.textContent = "Sevgilin çevrimdışı";
     partnerPresence.className = "presence-badge offline";
     return;
   }
 
   try {
-    const parsed = JSON.parse(raw);
-    const updated = parsed.updatedAt ? new Date(parsed.updatedAt).getTime() : 0;
-    const isOnline = Boolean(parsed.partnerOnline) && Date.now() - updated < 15000;
+    const updated = source.updatedAt ? new Date(source.updatedAt).getTime() : 0;
+    const isOnline = Boolean(source.partnerOnline) && Date.now() - updated < 15000;
 
     partnerPresence.textContent = isOnline ? "Sevgilin çevrimiçi" : "Sevgilin çevrimdışı";
     partnerPresence.className = `presence-badge ${isOnline ? "online" : "offline"}`;
@@ -537,6 +551,22 @@ function renderPresenceBadge() {
     partnerPresence.textContent = "Sevgilin çevrimdışı";
     partnerPresence.className = "presence-badge offline";
   }
+}
+
+function loadPartnerPresence() {
+  const raw = localStorage.getItem(PRESENCE_KEY);
+  if (!raw) return { partnerOnline: false, updatedAt: null };
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { partnerOnline: false, updatedAt: null };
+  }
+}
+
+function savePartnerPresence() {
+  localStorage.setItem(PRESENCE_KEY, JSON.stringify(state.partnerPresence));
+  queueRemotePush();
 }
 
 function playLoveBurst() {
@@ -641,6 +671,7 @@ tabs.forEach((btn) => {
 });
 
 window.addEventListener("storage", () => {
+  state.partnerPresence = loadPartnerPresence();
   renderPresenceBadge();
   state.activityTimeline = loadActivityTimeline();
   state.loginLogs = loadLoginLogs();
