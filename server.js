@@ -27,6 +27,7 @@ const MIME = {
 function defaultState() {
   return {
     requests: [],
+    deletedRequestIds: [],
     customNotifications: [],
     activityTimeline: [],
     loginLogs: [],
@@ -55,6 +56,9 @@ function readState() {
       ...defaultState(),
       ...parsed,
       requests: Array.isArray(parsed.requests) ? parsed.requests : [],
+      deletedRequestIds: Array.isArray(parsed.deletedRequestIds)
+        ? parsed.deletedRequestIds.map((id) => String(id))
+        : [],
       customNotifications: Array.isArray(parsed.customNotifications) ? parsed.customNotifications : [],
       activityTimeline: Array.isArray(parsed.activityTimeline) ? parsed.activityTimeline : [],
       loginLogs: Array.isArray(parsed.loginLogs) ? parsed.loginLogs : [],
@@ -71,10 +75,18 @@ function readState() {
 
 function writeState(next) {
   ensureStateFile();
+  const deletedSet = new Set(
+    Array.isArray(next.deletedRequestIds) ? next.deletedRequestIds.map((id) => String(id)) : []
+  );
+  const sanitizedRequests = Array.isArray(next.requests)
+    ? next.requests.filter((item) => !deletedSet.has(String(item.id)))
+    : [];
+
   const safe = {
     ...defaultState(),
     ...next,
-    requests: Array.isArray(next.requests) ? next.requests : [],
+    requests: sanitizedRequests,
+    deletedRequestIds: [...deletedSet],
     customNotifications: Array.isArray(next.customNotifications) ? next.customNotifications : [],
     activityTimeline: Array.isArray(next.activityTimeline) ? next.activityTimeline : [],
     loginLogs: Array.isArray(next.loginLogs) ? next.loginLogs : [],
@@ -87,6 +99,49 @@ function writeState(next) {
   };
   fs.writeFileSync(STATE_FILE, JSON.stringify(safe, null, 2));
   return safe;
+}
+
+function mergeState(next) {
+  const current = readState();
+  const incomingRequests = Array.isArray(next.requests) ? next.requests : [];
+  const incomingDeleted = Array.isArray(next.deletedRequestIds)
+    ? next.deletedRequestIds.map((id) => String(id))
+    : [];
+
+  const deletedSet = new Set([...(current.deletedRequestIds || []), ...incomingDeleted]);
+  const requestMap = new Map();
+
+  current.requests.forEach((item) => {
+    requestMap.set(String(item.id), item);
+  });
+
+  incomingRequests.forEach((item) => {
+    if (!item || item.id == null) return;
+    const id = String(item.id);
+    if (deletedSet.has(id)) return;
+
+    const currentItem = requestMap.get(id);
+    if (!currentItem) {
+      requestMap.set(id, item);
+      return;
+    }
+
+    const currentUpdatedAt = Date.parse(currentItem.updatedAt || currentItem.createdAt || 0) || 0;
+    const incomingUpdatedAt = Date.parse(item.updatedAt || item.createdAt || 0) || 0;
+
+    if (incomingUpdatedAt >= currentUpdatedAt) {
+      requestMap.set(id, item);
+    }
+  });
+
+  const mergedRequests = [...requestMap.values()].filter((item) => !deletedSet.has(String(item.id)));
+
+  return writeState({
+    ...current,
+    ...next,
+    requests: mergedRequests,
+    deletedRequestIds: [...deletedSet],
+  });
 }
 
 function writePresence(nextPresence) {
@@ -228,7 +283,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const raw = await readBody(req);
       const payload = raw ? JSON.parse(raw) : {};
-      const saved = writeState(payload);
+      const saved = mergeState(payload);
       return sendJson(req, res, 200, saved);
     } catch (error) {
       return sendJson(req, res, 400, { error: "Invalid JSON payload" });
