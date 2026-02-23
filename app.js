@@ -63,6 +63,10 @@ const REMOTE_STATE_IS_SAME_ORIGIN = (() => {
   }
 })();
 const REMOTE_FETCH_CREDENTIALS = REMOTE_STATE_IS_SAME_ORIGIN ? "same-origin" : "include";
+const STATIC_ONLY_HOSTS = ["github.io", "githubusercontent.com"];
+const RUNNING_ON_STATIC_ONLY_HOST = STATIC_ONLY_HOSTS.some((host) =>
+  window.location.hostname.endsWith(host)
+);
 const PARTNER_EMAIL = String(config.partnerEmail || "").trim();
 let remoteSyncEnabled = SYNC_MODE !== "local";
 let hasWarnedRemoteUnavailable = false;
@@ -422,11 +426,19 @@ function applyRemoteState(remote) {
 let remotePushTimer = null;
 let suppressRemotePush = false;
 let hasPendingRemoteChanges = false;
+let hasHydratedRemoteState = false;
+let remoteHydrationPromise = null;
 
-function notifyRemoteUnavailable() {
+function notifyRemoteUnavailable(reason = "") {
   if (hasWarnedRemoteUnavailable) return;
   hasWarnedRemoteUnavailable = true;
   if (!siteLoginInfo) return;
+
+  if (reason === "static-host") {
+    siteLoginInfo.textContent =
+      "Bu site şu anda GitHub Pages gibi statik bir ortamda açılmış. Farklı cihaz senkronu için siteyi Render/Turhost Node sunucusunda açmalısın.";
+    return;
+  }
 
   if (SYNC_MODE === "auto") {
     if (!siteLoginInfo.textContent) {
@@ -437,12 +449,12 @@ function notifyRemoteUnavailable() {
 
   if (SYNC_MODE === "remote") {
     siteLoginInfo.textContent =
-      "Sunucu bağlantısı yok. Farklı cihaz senkronu için Render servisinin açık olduğundan emin ol.";
+      "Sunucu bağlantısı yok. Farklı cihaz senkronu için Render servisinin açık olduğundan ve domainin Render'a yönlendiğinden emin ol.";
   }
 }
 
 function queueRemotePush() {
-  if (suppressRemotePush || !remoteSyncEnabled) return;
+  if (suppressRemotePush || !remoteSyncEnabled || !hasHydratedRemoteState) return;
   hasPendingRemoteChanges = true;
   if (remotePushTimer) clearTimeout(remotePushTimer);
   remotePushTimer = setTimeout(pushRemoteState, 250);
@@ -457,7 +469,7 @@ function queuePresencePush() {
 }
 
 async function pushPresenceState() {
-  if (!remoteSyncEnabled || !state.partnerPresence) return;
+  if (!remoteSyncEnabled || !state.partnerPresence || !hasHydratedRemoteState) return;
 
   try {
     await fetch(PRESENCE_ENDPOINT, {
@@ -473,11 +485,17 @@ async function pushPresenceState() {
 
 async function syncBeforeMutation() {
   if (!remoteSyncEnabled) return;
+  if (!hasHydratedRemoteState) {
+    await ensureRemoteHydrated();
+  }
   await pullRemoteState();
 }
 
-async function pushRemoteState() {
+async function pushRemoteState(options = {}) {
+  const { force = false } = options;
+
   if (!remoteSyncEnabled) return;
+  if (!hasHydratedRemoteState && !force) return;
 
   try {
     const response = await fetch(REMOTE_STATE_ENDPOINT, {
@@ -525,12 +543,29 @@ async function pullRemoteState() {
 
     const remote = await response.json();
     applyRemoteState(remote);
+    hasHydratedRemoteState = true;
   } catch {
     if (SYNC_MODE === "auto") {
       remoteSyncEnabled = false;
       notifyRemoteUnavailable();
     }
     // Remote API unavailable: continue with local state.
+  }
+}
+
+async function ensureRemoteHydrated() {
+  if (!remoteSyncEnabled || hasHydratedRemoteState) return;
+  if (remoteHydrationPromise) {
+    await remoteHydrationPromise;
+    return;
+  }
+
+  remoteHydrationPromise = pullRemoteState();
+
+  try {
+    await remoteHydrationPromise;
+  } finally {
+    remoteHydrationPromise = null;
   }
 }
 
@@ -1281,8 +1316,13 @@ setAdminSession(localStorage.getItem(ADMIN_SESSION_KEY) === "1");
 setSiteSession(sessionStorage.getItem(SITE_SESSION_KEY) === "1");
 renderPresenceBadge();
 if (remoteSyncEnabled) {
-  pullRemoteState();
-  setInterval(pullRemoteState, 7000);
+  if (RUNNING_ON_STATIC_ONLY_HOST && REMOTE_STATE_IS_SAME_ORIGIN) {
+    remoteSyncEnabled = false;
+    notifyRemoteUnavailable("static-host");
+  } else {
+    pullRemoteState();
+    setInterval(pullRemoteState, 7000);
+  }
 }
 
 setInterval(updatePresenceHeartbeat, 5000);
