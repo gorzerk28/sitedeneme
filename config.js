@@ -8,7 +8,7 @@ window.APP_CONFIG = {
   ownerUsername: "kalpsorumlusu",
   ownerSitePassword: "gorzerk28",
   // Talep cevaplandığında bildirimin gideceği e-posta
-  partnerEmail: "kalpdefterimiz@gmail.com",
+  partnerEmail: "onerrdogukan@gmail.com",
   // Senkron modu:
   // local  -> sadece bu cihazda çalışır (farklı cihazda talep görünmez).
   // remote -> farklı cihazların aynı talepleri görmesi için zorunlu.
