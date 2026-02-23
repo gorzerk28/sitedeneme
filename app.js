@@ -421,6 +421,7 @@ function applyRemoteState(remote) {
 
 let remotePushTimer = null;
 let suppressRemotePush = false;
+let hasPendingRemoteChanges = false;
 
 function notifyRemoteUnavailable() {
   if (hasWarnedRemoteUnavailable) return;
@@ -442,6 +443,7 @@ function notifyRemoteUnavailable() {
 
 function queueRemotePush() {
   if (suppressRemotePush || !remoteSyncEnabled) return;
+  hasPendingRemoteChanges = true;
   if (remotePushTimer) clearTimeout(remotePushTimer);
   remotePushTimer = setTimeout(pushRemoteState, 250);
 }
@@ -485,10 +487,15 @@ async function pushRemoteState() {
       credentials: REMOTE_FETCH_CREDENTIALS,
     });
 
-    if (!response.ok && SYNC_MODE === "auto") {
-      remoteSyncEnabled = false;
-      notifyRemoteUnavailable();
+    if (!response.ok) {
+      if (SYNC_MODE === "auto") {
+        remoteSyncEnabled = false;
+        notifyRemoteUnavailable();
+      }
+      return;
     }
+
+    hasPendingRemoteChanges = false;
   } catch {
     if (SYNC_MODE === "auto") {
       remoteSyncEnabled = false;
@@ -500,6 +507,7 @@ async function pushRemoteState() {
 
 async function pullRemoteState() {
   if (!remoteSyncEnabled) return;
+  if (hasPendingRemoteChanges) return;
 
   try {
     const response = await fetch(REMOTE_STATE_ENDPOINT, {
@@ -547,18 +555,35 @@ function resolveSiteLoginActor(username, password) {
   return "";
 }
 
+let ownsPartnerPresenceSession = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY) === "Sevgilin";
+
+function setPartnerPresence(online) {
+  state.partnerPresence = {
+    partnerOnline: online,
+    updatedAt: new Date().toISOString(),
+  };
+
+  savePartnerPresence();
+  if (remoteSyncEnabled) {
+    queuePresencePush();
+  }
+}
+
 function updatePresenceHeartbeat() {
   const isSiteUnlocked = sessionStorage.getItem(SITE_SESSION_KEY) === "1";
   const loginActor = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY);
   const isPartnerSession = loginActor === "Sevgilin";
 
-  state.partnerPresence = {
-    partnerOnline: isSiteUnlocked && isPartnerSession,
-    updatedAt: new Date().toISOString(),
-  };
+  if (isSiteUnlocked && isPartnerSession) {
+    ownsPartnerPresenceSession = true;
+    setPartnerPresence(true);
+    return;
+  }
 
-  savePartnerPresence();
-  queuePresencePush();
+  if (ownsPartnerPresenceSession) {
+    setPartnerPresence(false);
+    ownsPartnerPresenceSession = false;
+  }
 }
 
 function renderPresenceBadge() {
@@ -728,6 +753,7 @@ siteLoginForm.addEventListener("submit", (event) => {
     setSiteSession(true);
 
     if (actor === "Sevgilin") {
+      ownsPartnerPresenceSession = true;
       addActivity("partner", "Sevgilin siteye giriş yaptı.");
     } else {
       addActivity("admin", "Kalp Sorumlusu site girişini yaptı.");
@@ -758,6 +784,10 @@ siteLoginForm.addEventListener("submit", (event) => {
 
 siteLogoutBtn.addEventListener("click", () => {
   const actor = sessionStorage.getItem(SITE_LOGIN_ACTOR_KEY) || "Site Kullanıcısı";
+
+  if (actor === "Sevgilin") {
+    ownsPartnerPresenceSession = true;
+  }
 
   setAdminSession(false);
   setSiteSession(false);
@@ -1031,6 +1061,7 @@ function createAdminCard(item) {
     target.partnerNotified = false;
 
     saveRequests();
+    await pushRemoteState();
     addActivity("admin", `Talep güncellendi: ${item.title} → ${status}`);
 
     if (status === "Kabul Edildi" || status === "Tamamlandı") {
@@ -1075,6 +1106,7 @@ function createAdminCard(item) {
 
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
+    await pushRemoteState();
     addActivity("admin", `Talep silindi: ${item.title}`);
 
     renderTrackNotifications();
@@ -1115,6 +1147,7 @@ sendNotificationForm.addEventListener("submit", async (event) => {
 
   state.customNotifications.push(customNotification);
   saveCustomNotifications();
+  await pushRemoteState();
   renderTrackNotifications();
 
   sendNotificationForm.reset();
@@ -1145,6 +1178,7 @@ requestForm.addEventListener("submit", async (event) => {
 
   state.requests.push(request);
   saveRequests();
+  await pushRemoteState();
 
   requestForm.reset();
   formInfo.textContent = "Talebin başarıyla gönderildi! Talep Takip sekmesinden durumu izleyebilirsin.";
