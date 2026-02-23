@@ -89,6 +89,22 @@ function writeState(next) {
   return safe;
 }
 
+function writePresence(nextPresence) {
+  const current = readState();
+  const safePresence =
+    nextPresence && typeof nextPresence === "object"
+      ? {
+          partnerOnline: Boolean(nextPresence.partnerOnline),
+          updatedAt: nextPresence.updatedAt || new Date().toISOString(),
+        }
+      : { partnerOnline: false, updatedAt: null };
+
+  return writeState({
+    ...current,
+    partnerPresence: safePresence,
+  });
+}
+
 function sendJson(req, res, status, payload) {
   const origin = req.headers.origin;
   const headers = {
@@ -216,6 +232,20 @@ const server = http.createServer(async (req, res) => {
       return sendJson(req, res, 200, saved);
     } catch (error) {
       return sendJson(req, res, 400, { error: "Invalid JSON payload" });
+    }
+  }
+
+  if (url.pathname === "/api/presence" && req.method === "PUT") {
+    try {
+      const raw = await readBody(req);
+      const payload = raw ? JSON.parse(raw) : {};
+      const saved = writePresence(payload.partnerPresence);
+      return sendJson(req, res, 200, {
+        ok: true,
+        partnerPresence: saved.partnerPresence,
+      });
+    } catch {
+      return sendJson(req, res, 400, { ok: false, error: "Invalid JSON payload" });
     }
   }
 
