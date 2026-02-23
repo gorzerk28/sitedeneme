@@ -1102,9 +1102,10 @@ function createAdminCard(item) {
     target.result = result;
     target.updatedAt = new Date().toISOString();
     target.partnerNotified = false;
+    target._rev = Number(target._rev || 0) + 1;
 
     saveRequests();
-    await pushRemoteState({ deletedRequestIds: [item.id] });
+    await pushRemoteState();
     addActivity("admin", `Talep güncellendi: ${item.title} → ${status}`);
 
     if (status === "Kabul Edildi" || status === "Tamamlandı") {
@@ -1149,7 +1150,7 @@ function createAdminCard(item) {
 
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
-    await pushRemoteState();
+    await pushRemoteState({ deletedRequestIds: [item.id] });
     addActivity("admin", `Talep silindi: ${item.title}`);
 
     renderTrackNotifications();
@@ -1215,6 +1216,7 @@ requestForm.addEventListener("submit", async (event) => {
     status: "Beklemede",
     result: "Talebin sevgiyle alındı. En kısa sürede değerlendirilecek 💞",
     partnerNotified: true,
+    _rev: 1,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
