@@ -101,6 +101,12 @@ function writeState(next) {
   return safe;
 }
 
+function getRequestRevision(item) {
+  const parsed = Number(item?._rev ?? 0);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.floor(parsed);
+}
+
 function mergeState(next) {
   const current = readState();
   const incomingRequests = Array.isArray(next.requests) ? next.requests : [];
@@ -121,8 +127,21 @@ function mergeState(next) {
     if (deletedSet.has(id)) return;
 
     const currentItem = requestMap.get(id);
+    const incomingRev = getRequestRevision(item);
+
     if (!currentItem) {
-      requestMap.set(id, item);
+      requestMap.set(id, { ...item, _rev: incomingRev > 0 ? incomingRev : 1 });
+      return;
+    }
+
+    const currentRev = getRequestRevision(currentItem);
+
+    if (incomingRev > currentRev) {
+      requestMap.set(id, { ...item, _rev: incomingRev });
+      return;
+    }
+
+    if (incomingRev < currentRev) {
       return;
     }
 
@@ -130,7 +149,8 @@ function mergeState(next) {
     const incomingUpdatedAt = Date.parse(item.updatedAt || item.createdAt || 0) || 0;
 
     if (incomingUpdatedAt >= currentUpdatedAt) {
-      requestMap.set(id, item);
+      const normalizedRev = incomingRev > 0 ? incomingRev : currentRev > 0 ? currentRev : 1;
+      requestMap.set(id, { ...item, _rev: normalizedRev });
     }
   });
 
