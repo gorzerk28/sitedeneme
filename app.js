@@ -376,8 +376,10 @@ function playCelebrationBurst(mode = "soft") {
   }
 }
 
-function getSerializableState() {
-  return {
+function getSerializableState(options = {}) {
+  const { deletedRequestIds = [] } = options;
+
+  const payload = {
     requests: state.requests,
     customNotifications: state.customNotifications,
     activityTimeline: state.activityTimeline,
@@ -385,6 +387,12 @@ function getSerializableState() {
     dailyMessages: state.dailyMessages,
     partnerPresence: state.partnerPresence,
   };
+
+  if (Array.isArray(deletedRequestIds) && deletedRequestIds.length) {
+    payload.deletedRequestIds = deletedRequestIds;
+  }
+
+  return payload;
 }
 
 function applyRemoteState(remote) {
@@ -492,7 +500,7 @@ async function syncBeforeMutation() {
 }
 
 async function pushRemoteState(options = {}) {
-  const { force = false } = options;
+  const { force = false, deletedRequestIds = [] } = options;
 
   if (!remoteSyncEnabled) return;
   if (!hasHydratedRemoteState && !force) return;
@@ -501,7 +509,7 @@ async function pushRemoteState(options = {}) {
     const response = await fetch(REMOTE_STATE_ENDPOINT, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(getSerializableState()),
+      body: JSON.stringify(getSerializableState({ deletedRequestIds })),
       credentials: REMOTE_FETCH_CREDENTIALS,
     });
 
@@ -1096,7 +1104,7 @@ function createAdminCard(item) {
     target.partnerNotified = false;
 
     saveRequests();
-    await pushRemoteState();
+    await pushRemoteState({ deletedRequestIds: [item.id] });
     addActivity("admin", `Talep güncellendi: ${item.title} → ${status}`);
 
     if (status === "Kabul Edildi" || status === "Tamamlandı") {
