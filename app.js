@@ -54,6 +54,7 @@ function resolveRemoteStateEndpoint() {
 
 const REMOTE_STATE_ENDPOINT = resolveRemoteStateEndpoint();
 const NOTIFY_ENDPOINT = REMOTE_STATE_ENDPOINT.replace(/\/api\/state$/, "/api/notify");
+const PRESENCE_ENDPOINT = REMOTE_STATE_ENDPOINT.replace(/\/api\/state$/, "/api/presence");
 const REMOTE_STATE_IS_SAME_ORIGIN = (() => {
   try {
     return new URL(REMOTE_STATE_ENDPOINT, window.location.origin).origin === window.location.origin;
@@ -445,6 +446,34 @@ function queueRemotePush() {
   remotePushTimer = setTimeout(pushRemoteState, 250);
 }
 
+let presencePushTimer = null;
+
+function queuePresencePush() {
+  if (!remoteSyncEnabled || !state.partnerPresence) return;
+  if (presencePushTimer) clearTimeout(presencePushTimer);
+  presencePushTimer = setTimeout(pushPresenceState, 120);
+}
+
+async function pushPresenceState() {
+  if (!remoteSyncEnabled || !state.partnerPresence) return;
+
+  try {
+    await fetch(PRESENCE_ENDPOINT, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: REMOTE_FETCH_CREDENTIALS,
+      body: JSON.stringify({ partnerPresence: state.partnerPresence }),
+    });
+  } catch {
+    // presence gönderimi başarısızsa UI yerel çalışmaya devam eder.
+  }
+}
+
+async function syncBeforeMutation() {
+  if (!remoteSyncEnabled) return;
+  await pullRemoteState();
+}
+
 async function pushRemoteState() {
   if (!remoteSyncEnabled) return;
 
@@ -529,6 +558,7 @@ function updatePresenceHeartbeat() {
   };
 
   savePartnerPresence();
+  queuePresencePush();
 }
 
 function renderPresenceBadge() {
@@ -566,7 +596,6 @@ function loadPartnerPresence() {
 
 function savePartnerPresence() {
   localStorage.setItem(PRESENCE_KEY, JSON.stringify(state.partnerPresence));
-  queueRemotePush();
 }
 
 function playLoveBurst() {
@@ -987,8 +1016,9 @@ function createAdminCard(item) {
   form.elements.status.value = item.status;
   form.elements.result.value = item.result;
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    await syncBeforeMutation();
     const status = form.elements.status.value;
     const result = form.elements.result.value.trim();
 
@@ -1037,9 +1067,11 @@ function createAdminCard(item) {
     mailBtn.disabled = false;
   });
 
-  deleteBtn.addEventListener("click", () => {
+  deleteBtn.addEventListener("click", async () => {
     const confirmed = confirm(`"${item.title}" talebini kalıcı olarak silmek istiyor musun?`);
     if (!confirmed) return;
+
+    await syncBeforeMutation();
 
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
@@ -1065,8 +1097,9 @@ function renderAdminList() {
   ordered.forEach((item) => adminList.appendChild(createAdminCard(item)));
 }
 
-sendNotificationForm.addEventListener("submit", (event) => {
+sendNotificationForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  await syncBeforeMutation();
 
   const formData = new FormData(sendNotificationForm);
   const title = formData.get("notifyTitle").toString().trim();
@@ -1091,8 +1124,9 @@ sendNotificationForm.addEventListener("submit", (event) => {
   playCelebrationBurst("soft");
 });
 
-requestForm.addEventListener("submit", (event) => {
+requestForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  await syncBeforeMutation();
 
   const formData = new FormData(requestForm);
   const request = {
