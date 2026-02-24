@@ -1091,9 +1091,14 @@ function createAdminCard(item) {
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    await syncBeforeMutation();
+
+    // Not: kullanıcı formu submit ettiğinde önce form değerlerini alıyoruz.
+    // Aksi halde syncBeforeMutation sırasında gelen remote render, formu eski
+    // değerle yeniden çizip kullanıcının girdiğini geri alabiliyor.
     const status = form.elements.status.value;
     const result = form.elements.result.value.trim();
+
+    await syncBeforeMutation();
 
     const target = state.requests.find((req) => req.id === item.id);
     if (!target) return;
