@@ -395,6 +395,15 @@ function getSerializableState(options = {}) {
   return payload;
 }
 
+function isAdminEditorActive() {
+  if (!adminList) return false;
+  const active = document.activeElement;
+  if (!active) return false;
+  if (!adminList.contains(active)) return false;
+  const tag = (active.tagName || "").toLowerCase();
+  return tag === "textarea" || tag === "select" || tag === "input";
+}
+
 function applyRemoteState(remote) {
   if (!remote || typeof remote !== "object") return;
 
@@ -424,7 +433,9 @@ function applyRemoteState(remote) {
 
   renderTrackNotifications();
   renderTrackList();
-  renderAdminList();
+  if (!isAdminEditorActive()) {
+    renderAdminList();
+  }
   renderActivityTimeline();
   renderLoginLogs();
   renderDailyLoveMessage();
