@@ -91,6 +91,8 @@ const state = {
   failedSiteAttempts: 0,
 };
 
+const adminDrafts = new Map();
+
 const body = document.body;
 const appShell = document.getElementById("appShell");
 const siteLoginForm = document.getElementById("siteLoginForm");
@@ -1097,8 +1099,19 @@ function createAdminCard(item) {
   const deleteBtn = node.querySelector('[data-role="deleteBtn"]');
   const notifyInfo = node.querySelector('[data-role="notifyInfo"]');
 
-  form.elements.status.value = item.status;
-  form.elements.result.value = item.result;
+  const draft = adminDrafts.get(String(item.id));
+  form.elements.status.value = draft?.status ?? item.status;
+  form.elements.result.value = draft?.result ?? item.result;
+
+  const persistDraft = () => {
+    adminDrafts.set(String(item.id), {
+      status: form.elements.status.value,
+      result: form.elements.result.value,
+    });
+  };
+
+  form.elements.status.addEventListener("change", persistDraft);
+  form.elements.result.addEventListener("input", persistDraft);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -1122,6 +1135,7 @@ function createAdminCard(item) {
 
     saveRequests();
     await pushRemoteState();
+    adminDrafts.delete(String(item.id));
     addActivity("admin", `Talep güncellendi: ${item.title} → ${status}`);
 
     if (status === "Kabul Edildi" || status === "Tamamlandı") {
@@ -1167,6 +1181,7 @@ function createAdminCard(item) {
     state.requests = state.requests.filter((req) => req.id !== item.id);
     saveRequests();
     await pushRemoteState({ deletedRequestIds: [item.id] });
+    adminDrafts.delete(String(item.id));
     addActivity("admin", `Talep silindi: ${item.title}`);
 
     renderTrackNotifications();
