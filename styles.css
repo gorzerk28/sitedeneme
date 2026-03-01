@@ -1,0 +1,84 @@
+diff --git a/styles.css b/styles.css
+index 0a4a31cd19a814a2294ec601c347bfe1c9f38216..ca4b98889224a868fe39fc27fc857d7316410529 100644
+--- a/styles.css
++++ b/styles.css
+@@ -410,50 +410,79 @@ textarea {
+   border-top: 1px dashed var(--line);
+   margin-top: 4px;
+   padding-top: 8px;
+   display: grid;
+   gap: 4px;
+ }
+ 
+ .inline-form {
+   margin-top: 12px;
+   display: flex;
+   gap: 8px;
+   flex-wrap: wrap;
+ }
+ 
+ .admin-toolbar {
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+   margin-bottom: 12px;
+ }
+ 
+ .notify-send-card {
+   margin-bottom: 12px;
+ }
+ 
++.service-toggle-card {
++  margin-bottom: 12px;
++}
++
++.service-pause-card {
++  margin-top: 14px;
++  border: 1px solid #ffd4e4;
++  border-radius: 14px;
++  padding: 14px;
++  background: linear-gradient(135deg, #fff0f6, #fff8fc);
++  display: grid;
++  gap: 8px;
++}
++
++.service-pause-card h3 {
++  font-size: 1.05rem;
++  color: #8d2d5c;
++}
++
++.service-pause-text {
++  color: #5b2f45;
++  font-weight: 600;
++}
++
++.service-pause-emoji {
++  font-size: 1.35rem;
++  letter-spacing: 3px;
++}
++
+ .admin-form {
+   margin-top: 6px;
+   display: grid;
+   gap: 10px;
+ }
+ 
+ .admin-actions {
+   display: flex;
+   gap: 8px;
+   flex-wrap: wrap;
+ }
+ 
+ 
+ 
+ .daily-love-card {
+   margin-top: 14px;
+   border: 1px solid #f6d8e9;
+   border-radius: 14px;
+   padding: 12px;
+   background: linear-gradient(135deg, #fff3f9, #fffdfd);
+ }
+ 
+ .daily-love-text {
+   margin-top: 6px;
+   font-weight: 600;

@@ -1,0 +1,123 @@
+diff --git a/index.html b/index.html
+index ae0299e1a515fe4921582f31e12b51f15c2600f5..5231f7419f997a6c2a66b0a0659f00c405dc4abc 100644
+--- a/index.html
++++ b/index.html
+@@ -63,50 +63,58 @@
+         <div class="topbar-right">
+           <button id="notificationBell" class="notif-bell" type="button" aria-label="Talep bildirimleri">
+             <span class="notif-icon">💖</span>
+             <span id="notificationCount" class="notif-count hidden">0</span>
+           </button>
+           <p id="bellInfo" class="muted bell-info" aria-live="polite"></p>
+           <nav class="tabs" aria-label="Sayfalar">
+             <button class="tab-btn active" data-tab="create">Talep Oluştur</button>
+             <button class="tab-btn" data-tab="track">Talep Takip</button>
+             <button class="tab-btn" data-tab="admin" id="adminTabBtn">Kalp Sorumlusu 💘</button>
+           </nav>
+           <button id="siteLogoutBtn" class="btn-ghost" type="button">Siteyi Kilitle</button>
+         </div>
+       </header>
+ 
+       <section class="panel active" id="create">
+         <article class="card">
+           <h2>Kalbinden Geçeni Yaz</h2>
+           <p class="muted">Ne hissettiğini yaz, ben de özenle değerlendirip dönüş yapayım.</p>
+ 
+           <article class="daily-love-card" aria-live="polite">
+             <p class="eyebrow">✨ Günün Mesajı</p>
+             <p id="dailyLoveMessage" class="daily-love-text"></p>
+           </article>
+ 
++          <article id="servicePauseBanner" class="service-pause-card hidden" aria-live="polite">
++            <p class="eyebrow">💔 Kalp Servisi Geçici Olarak Molada</p>
++            <h3>Kalp Sorumlusu şu an sinirli / kalbi kırık modunda</h3>
++            <p id="servicePauseMessage" class="service-pause-text"></p>
++            <p class="muted">🫶 Küçük bir barışma hamlesi, tatlı bir sarılma ve bolca özürle sistem tekrar açılabilir.</p>
++            <div class="service-pause-emoji" aria-hidden="true">🙈💐🍫💌🧸</div>
++          </article>
++
+           <form id="requestForm" class="form-grid">
+             <label>
+               Talep Başlığı
+               <input name="title" placeholder="Örn: Gün batımında sahil yürüyüşü" required />
+             </label>
+ 
+             <label>
+               Kategori
+               <select name="category" required>
+                 <option value="">Seçiniz</option>
+                 <option>Romantik</option>
+                 <option>Gezi</option>
+                 <option>Sürpriz</option>
+                 <option>Destek</option>
+                 <option>Diğer</option>
+               </select>
+             </label>
+ 
+             <label>
+               Öncelik
+               <select name="priority" required>
+                 <option value="">Seçiniz</option>
+                 <option>Normal</option>
+                 <option>Yüksek</option>
+                 <option>Çok Acil</option>
+@@ -184,50 +192,59 @@
+             <div id="activityTimeline" class="activity-timeline"></div>
+           </article>
+ 
+           <article class="card">
+             <h2>🔐 Giriş Log Kayıtları</h2>
+             <p class="muted">Partner ve Kalp Sorumlusu giriş/çıkış kayıtları burada saklanır.</p>
+             <div id="loginLogs" class="activity-timeline"></div>
+           </article>
+ 
+           <article class="card">
+             <h2>📝 Günün Mesajı Ayarları</h2>
+             <p class="muted">Her satıra bir romantik söz yaz. Kaydettiğinde günlük mesajlar bu listeden döner.</p>
+             <form id="dailyMessageForm" class="admin-form">
+               <label>
+                 Günlük Mesaj Listesi (satır satır)
+                 <textarea id="dailyMessageInput" name="dailyMessages" rows="6" required></textarea>
+               </label>
+               <div class="admin-actions">
+                 <button class="btn-primary" type="submit">Mesajları Kaydet 💞</button>
+                 <button id="dailyMessageResetBtn" class="btn-ghost" type="button">Varsayılan Sözlere Dön</button>
+               </div>
+               <p id="dailyMessageInfo" class="muted" aria-live="polite"></p>
+             </form>
+           </article>
+ 
++          <article class="card service-toggle-card">
++            <h2>🚦 Kalp Servis Modu</h2>
++            <p class="muted">Kavga anlarında talep oluşturmayı geçici olarak durdurup, esprili bir uyarı ekranı gösterebilirsin.</p>
++            <div class="admin-actions">
++              <button id="toggleServicePauseBtn" class="btn-danger" type="button">Sinirli Modu Aç</button>
++            </div>
++            <p id="servicePauseAdminInfo" class="muted" aria-live="polite"></p>
++          </article>
++
+           <article class="card notify-send-card">
+             <h2>Sevgiline Bildirim Gönder</h2>
+             <p class="muted">Kalpte anında görünecek kısa bir not bırak.</p>
+             <form id="sendNotificationForm" class="admin-form">
+               <label>
+                 Bildirim Başlığı
+                 <input name="notifyTitle" placeholder="Örn: Aşk notu" required />
+               </label>
+               <label>
+                 Bildirim Mesajı
+                 <textarea name="notifyMessage" rows="3" required></textarea>
+               </label>
+               <button class="btn-primary" type="submit">Bildirimi Gönder 💖</button>
+               <p id="sendNotificationInfo" class="muted" aria-live="polite"></p>
+             </form>
+           </article>
+ 
+           <article class="card">
+             <h2>Gelen Talepler</h2>
+             <div id="adminList" class="stack"></div>
+           </article>
+         </div>
+       </section>
+     </main>
+ 
