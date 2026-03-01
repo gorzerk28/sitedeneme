@@ -1,5 +1,5 @@
 diff --git a/server.js b/server.js
-index 5ebbd42f9827306e459c29287084363e92a2005b..7669d1695218b79bc74fd21d53a53ce9dff795cf 100644
+index 5ebbd42f9827306e459c29287084363e92a2005b..d36aff21fd0246708ffdf6577c1f3a8640f9a0b7 100644
 --- a/server.js
 +++ b/server.js
 @@ -14,109 +14,126 @@ const EMAIL_FROM = String(process.env.EMAIL_FROM || "").trim();
@@ -129,7 +129,7 @@ index 5ebbd42f9827306e459c29287084363e92a2005b..7669d1695218b79bc74fd21d53a53ce9
    current.requests.forEach((item) => {
      requestMap.set(String(item.id), item);
    });
-@@ -179,51 +196,55 @@ function writePresence(nextPresence) {
+@@ -179,67 +196,74 @@ function writePresence(nextPresence) {
      partnerPresence: safePresence,
    });
  }
@@ -176,7 +176,11 @@ index 5ebbd42f9827306e459c29287084363e92a2005b..7669d1695218b79bc74fd21d53a53ce9
      }
  
      const ext = path.extname(fullPath).toLowerCase();
-     res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
++    res.writeHead(200, {
++      "Content-Type": MIME[ext] || "application/octet-stream",
++      "Cache-Control": "no-store",
++    });
      res.end(data);
    });
  }
@@ -186,3 +190,19 @@ index 5ebbd42f9827306e459c29287084363e92a2005b..7669d1695218b79bc74fd21d53a53ce9
      let body = "";
      req.on("data", (chunk) => {
        body += chunk;
+       if (body.length > 2 * 1024 * 1024) {
+         reject(new Error("Payload too large"));
+         req.destroy();
+       }
+     });
+     req.on("end", () => resolve(body));
+     req.on("error", reject);
+   });
+ }
+ 
+ async function sendEmail(payload) {
+   if (EMAIL_PROVIDER !== "resend" || !RESEND_API_KEY || !EMAIL_FROM) {
+     return {
+       ok: false,
+       status: 501,
+       error: "Email provider not configured",
