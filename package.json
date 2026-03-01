@@ -1,13 +1,20 @@
-{
-  "name": "kalp-postasi",
-  "version": "1.0.0",
-  "private": true,
-  "description": "Kalp Postasi request tracker",
-  "scripts": {
-    "start": "node server.js",
-    "check": "node --check app.js && node --check config.js && node --check server.js"
-  },
-  "engines": {
-    "node": ">=18"
-  }
-}
+diff --git a/package.json b/package.json
+index fec4d5d851cae0faf647463bf0962fe6098cb2e4..c6d8be9c48410e07b0acd3a39f7da4aca1de2b54 100644
+--- a/package.json
++++ b/package.json
+@@ -1,13 +1,14 @@
+ {
+   "name": "kalp-postasi",
+   "version": "1.0.0",
+   "private": true,
+   "description": "Kalp Postasi request tracker",
+   "scripts": {
+     "start": "node server.js",
+-    "check": "node --check app.js && node --check config.js && node --check server.js"
++    "check": "npm run verify:clean-source && node --check app.js && node --check config.js && node --check server.js",
++    "verify:clean-source": "node scripts/verify-clean-source.js"
+   },
+   "engines": {
+     "node": ">=18"
+   }
+ }
