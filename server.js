@@ -1,5 +1,5 @@
 diff --git a/server.js b/server.js
-index 5ebbd42f9827306e459c29287084363e92a2005b..59ceabceaa0228ea80d57e4a5f1a5b6a627d2996 100644
+index 5ebbd42f9827306e459c29287084363e92a2005b..7669d1695218b79bc74fd21d53a53ce9dff795cf 100644
 --- a/server.js
 +++ b/server.js
 @@ -14,109 +14,126 @@ const EMAIL_FROM = String(process.env.EMAIL_FROM || "").trim();
@@ -129,3 +129,60 @@ index 5ebbd42f9827306e459c29287084363e92a2005b..59ceabceaa0228ea80d57e4a5f1a5b6a
    current.requests.forEach((item) => {
      requestMap.set(String(item.id), item);
    });
+@@ -179,51 +196,55 @@ function writePresence(nextPresence) {
+     partnerPresence: safePresence,
+   });
+ }
+ 
+ function sendJson(req, res, status, payload) {
+   const origin = req.headers.origin;
+   const headers = {
+     "Content-Type": "application/json; charset=utf-8",
+     "Access-Control-Allow-Methods": "GET,PUT,OPTIONS",
+     "Access-Control-Allow-Headers": "Content-Type",
+     "Cache-Control": "no-store",
+   };
+ 
+   if (origin) {
+     headers["Access-Control-Allow-Origin"] = origin;
+     headers["Access-Control-Allow-Credentials"] = "true";
+     headers.Vary = "Origin";
+   }
+ 
+   res.writeHead(status, headers);
+   res.end(JSON.stringify(payload));
+ }
+ 
+ function serveStatic(req, res, pathname) {
+   const safePath = pathname === "/" ? "/index.html" : pathname;
+-  const fullPath = path.join(ROOT, path.normalize(safePath));
++  const normalizedRelativePath = path
++    .normalize(safePath)
++    .replace(/^([/\\])+/, "")
++    .replace(/^(\.\.(?:[/\\]|$))+/, "");
++  const fullPath = path.join(ROOT, normalizedRelativePath);
+ 
+   if (!fullPath.startsWith(ROOT)) {
+     res.writeHead(403);
+     res.end("Forbidden");
+     return;
+   }
+ 
+   fs.readFile(fullPath, (err, data) => {
+     if (err) {
+       res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+       res.end("Not Found");
+       return;
+     }
+ 
+     const ext = path.extname(fullPath).toLowerCase();
+     res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+     res.end(data);
+   });
+ }
+ 
+ function readBody(req) {
+   return new Promise((resolve, reject) => {
+     let body = "";
+     req.on("data", (chunk) => {
+       body += chunk;
